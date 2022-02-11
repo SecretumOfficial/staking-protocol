@@ -68,7 +68,7 @@ pub struct Staking<'info> {
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(mut,
-        constraint = *staking_account.to_account_info().key == *staker_account.staking_account,        
+        constraint = *staking_account.to_account_info().key == *stake_state_account.staking_account,        
     )]
     pub stake_state_account: ProgramAccount<'info, StakingState>,
 
@@ -83,8 +83,41 @@ pub struct Staking<'info> {
         constraint = staker_account.owner == *authority.key,
     )]
     pub staker_account: Account<'info, anchor_spl::token::TokenAccount>,
+            
+    #[account(signer,
+        constraint = *stake_state_account.onwer_address == *authority.key,
+    )]
+    pub authority: AccountInfo<'info>,
 
-    #[account(signer)]
+    #[account(address = anchor_spl::token::ID)]
+    pub token_program: AccountInfo<'info>,
+}
+
+
+#[derive(Accounts)]
+pub struct UnStaking<'info> {
+    pub staking_account: ProgramAccount<'info, StakingData>,
+
+    #[account(mut,
+        constraint = *staking_account.to_account_info().key == *staker_account.staking_account,        
+    )]
+    pub stake_state_account: ProgramAccount<'info, StakingState>,
+
+    #[account(mut,
+        constraint = staking_account.escrow_account == *escrow_account.key,        
+    )]
+    pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
+        constraint = *reclaimer.to_account_info().owner == *token_program.key,
+        constraint = reclaimer.mint == staking_account.mint_address,
+        constraint = reclaimer.owner == *authority.key,
+    )]
+    pub reclaimer: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(signer,
+        constraint = *stake_state_account.onwer_address == *authority.key,
+    )]
     pub authority: AccountInfo<'info>,
 
     #[account(address = anchor_spl::token::ID)]
