@@ -34,3 +34,30 @@ pub struct Initialize<'info> {
     #[account(address = anchor_spl::token::ID)]
     pub token_program: AccountInfo<'info>,
 }
+
+
+#[account]
+#[derive(Default)]
+pub struct StakingState {
+    pub staking_account: Pubkey,
+    pub mint_address: Pubkey,    
+    pub onwer_address: Pubkey,
+    pub total_staked: u64,
+    pub total_rewarded: u64,
+    pub last_staked: u64,
+    pub last_rewarded: u64,
+}
+
+#[derive(Accounts)]
+pub struct InitializeStaking<'info> {
+    pub staking_account: ProgramAccount<'info, StakingData>,
+
+    #[account(zero,)]
+    pub staker_account: ProgramAccount<'info, StakingState>,
+
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+
+    #[account(address = anchor_spl::token::ID)]
+    pub token_program: AccountInfo<'info>,
+}

@@ -36,4 +36,23 @@ mod tokenlock {
         staking_account.bump_seed = bump_seed;
         Ok(())
     }
+
+    pub fn initialize_staking(
+        ctx: Context<InitializeStaking>
+    ) -> ProgramResult {
+
+        let staking_account = &ctx.accounts.staking_account;
+        let staker_account = &mut ctx.accounts.staker_account;
+
+        staker_account.staking_account = *ctx.accounts.staking_account.to_account_info().key;
+        staker_account.mint_address = *staking_account.mint_address;
+        staker_account.onwer_address = *ctx.accounts.authority.key;
+        staker_account.total_staked = 0;
+        staker_account.total_rewarded = 0;
+        staker_account.last_staked = 0;
+        staker_account.last_rewarded = 0;
+        Ok(())
+    }
+
+    
 }
