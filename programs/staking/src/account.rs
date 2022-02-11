@@ -49,11 +49,40 @@ pub struct StakingState {
 }
 
 #[derive(Accounts)]
-pub struct InitializeStaking<'info> {
+pub struct InitializeStakeState<'info> {
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(zero,)]
-    pub staker_account: ProgramAccount<'info, StakingState>,
+    pub stake_state_account: ProgramAccount<'info, StakingState>,
+
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+
+    #[account(address = anchor_spl::token::ID)]
+    pub token_program: AccountInfo<'info>,
+}
+
+
+#[derive(Accounts)]
+pub struct Staking<'info> {
+    pub staking_account: ProgramAccount<'info, StakingData>,
+
+    #[account(mut,
+        constraint = *staking_account.to_account_info().key == *staker_account.staking_account,        
+    )]
+    pub stake_state_account: ProgramAccount<'info, StakingState>,
+
+    #[account(mut,
+        constraint = staking_account.escrow_account == *escrow_account.key,        
+    )]
+    pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
+        constraint = *staker_account.to_account_info().owner == *token_program.key,
+        constraint = staker_account.mint == staking_account.mint_address,
+        constraint = staker_account.owner == *authority.key,
+    )]
+    pub staker_account: Account<'info, anchor_spl::token::TokenAccount>,
 
     #[account(signer)]
     pub authority: AccountInfo<'info>,
