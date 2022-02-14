@@ -11,6 +11,9 @@ pub enum StakingErrors {
     #[msg("insufficient balance")]
     InSufficientBalance,
 
+    #[msg("insufficient staked balance")]
+    InSufficientStakedBalance,
+
     #[msg("insufficient escrow balance")]
     InSufficientEscrowBalance,
 }

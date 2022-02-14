@@ -53,6 +53,10 @@ mod staking {
         amount: u64
     ) -> ProgramResult {
 
+        if amount > ctx.accounts.staker_account.amount {
+            return Err(StakingErrors::InSufficientBalance.into());             
+        }
+
         let pda_account = &mut ctx.accounts.pda_account;
         let stake_state_account = &mut ctx.accounts.stake_state_account;
 
@@ -81,7 +85,7 @@ mod staking {
         let stake_state_account = &mut ctx.accounts.stake_state_account;
 
         if amount > stake_state_account.total_staked {
-            return Err(StakingErrors::InSufficientBalance.into());            
+            return Err(StakingErrors::InSufficientStakedBalance.into());            
         }
 
         if amount > pda_account.total_staked {
