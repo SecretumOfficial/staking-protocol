@@ -38,7 +38,8 @@ mod tokenlock {
     }
 
     pub fn initialize_stake_state(
-        ctx: Context<InitializeStakeState>
+        ctx: Context<InitializeStakeState>,
+        amount: u64
     ) -> ProgramResult {
 
         let staking_account = &ctx.accounts.staking_account;
@@ -54,5 +55,24 @@ mod tokenlock {
         Ok(())
     }
 
-    
+    pub fn staking(
+        ctx: Context<Staking>
+    ) -> ProgramResult {
+
+        let staking_account = &mut ctx.accounts.staking_account;
+        let stake_state_account = &mut ctx.accounts.stake_state_account;
+
+        utils::transfer_spl(ctx.accounts.staker_account.to_account_info().key, 
+            ctx.accounts.escrow_account.tp_account_info().key, 
+            ctx.accounts.authority.key, amount, staking_account)?;
+
+        //update staking data
+        staking_account.total_staked = staking_account.total_staked + amount;
+
+        //update staking state
+        let now_ts = Clock::get()?.unix_timestamp as u64;             
+        stake_state_account.total_staked = stake_state_account.total_staked + amount;
+        stake_state_account.last_staked = now_ts;
+        Ok(())
+    }
 }

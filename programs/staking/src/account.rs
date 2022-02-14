@@ -65,6 +65,7 @@ pub struct InitializeStakeState<'info> {
 
 #[derive(Accounts)]
 pub struct Staking<'info> {
+    #[account(mut)]
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(mut,
@@ -95,7 +96,7 @@ pub struct Staking<'info> {
 
 
 #[derive(Accounts)]
-pub struct UnStaking<'info> {
+pub struct Unstaking<'info> {
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(mut,

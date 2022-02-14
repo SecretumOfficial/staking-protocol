@@ -11,7 +11,7 @@ pub fn transfer_spl<'info>(
     authority: &AccountInfo<'info>,
     token_program: &AccountInfo<'info>,
     amount: u64,
-    staking_account: &ProgramAccount<'info, TokenLockData>,
+    staking_account: &ProgramAccount<'info, StakingData>,
 ) -> ProgramResult {
     let cpi_accounts = Transfer {
         from: from.clone(),
