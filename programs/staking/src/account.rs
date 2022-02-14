@@ -69,12 +69,12 @@ pub struct Staking<'info> {
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(mut,
-        constraint = *staking_account.to_account_info().key == *stake_state_account.staking_account,        
+        constraint = *staking_account.to_account_info().key == stake_state_account.staking_account,
     )]
     pub stake_state_account: ProgramAccount<'info, StakingState>,
 
     #[account(mut,
-        constraint = staking_account.escrow_account == *escrow_account.key,        
+        constraint = staking_account.escrow_account == *escrow_account.to_account_info().key,
     )]
     pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
 
@@ -86,7 +86,7 @@ pub struct Staking<'info> {
     pub staker_account: Account<'info, anchor_spl::token::TokenAccount>,
             
     #[account(signer,
-        constraint = *stake_state_account.onwer_address == *authority.key,
+        constraint = stake_state_account.onwer_address == *authority.key,
     )]
     pub authority: AccountInfo<'info>,
 
@@ -100,12 +100,12 @@ pub struct Unstaking<'info> {
     pub staking_account: ProgramAccount<'info, StakingData>,
 
     #[account(mut,
-        constraint = *staking_account.to_account_info().key == *staker_account.staking_account,        
+        constraint = *staking_account.to_account_info().key == stake_state_account.staking_account,
     )]
     pub stake_state_account: ProgramAccount<'info, StakingState>,
 
     #[account(mut,
-        constraint = staking_account.escrow_account == *escrow_account.key,        
+        constraint = staking_account.escrow_account == *escrow_account.to_account_info().key,        
     )]
     pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
 
@@ -117,7 +117,7 @@ pub struct Unstaking<'info> {
     pub reclaimer: Account<'info, anchor_spl::token::TokenAccount>,
 
     #[account(signer,
-        constraint = *stake_state_account.onwer_address == *authority.key,
+        constraint = stake_state_account.onwer_address == *authority.key,
     )]
     pub authority: AccountInfo<'info>,
 

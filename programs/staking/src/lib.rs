@@ -6,14 +6,11 @@ pub mod event;
 pub mod utils;
 
 use crate::account::*;
-use crate::error::*;
-use crate::event::*;
-use crate::utils::*;
 
-declare_id!("DauurS9F1fswgikQeCqWAzTpMAg1hKXRUcfUMMvoZxsB");
+declare_id!("HohQ7VZFqDDn785ukULBKpNRKHsZXQPtCeUJ9PzYxgZ");
 
 #[program]
-mod tokenlock {
+mod staking {
     use super::*;
 
     pub fn initialize(
@@ -24,9 +21,9 @@ mod tokenlock {
     ) -> ProgramResult {
         let staking_account = &mut ctx.accounts.staking_account;
 
-        if max_release_delay < 1 {
-            return Err(TokenlockErrors::MaxReleaseDelayLessThanOne.into());
-        }
+        // if max_release_delay < 1 {
+        //     return Err(StakingErrors::MaxReleaseDelayLessThanOne.into());
+        // }
 
         staking_account.escrow_account = *ctx.accounts.escrow_account.to_account_info().key;
         staking_account.mint_address = *ctx.accounts.mint_address.key;
@@ -38,15 +35,14 @@ mod tokenlock {
     }
 
     pub fn initialize_stake_state(
-        ctx: Context<InitializeStakeState>,
-        amount: u64
+        ctx: Context<InitializeStakeState>
     ) -> ProgramResult {
 
         let staking_account = &ctx.accounts.staking_account;
         let stake_state_account = &mut ctx.accounts.stake_state_account;
 
         stake_state_account.staking_account = *ctx.accounts.staking_account.to_account_info().key;
-        stake_state_account.mint_address = *staking_account.mint_address;
+        stake_state_account.mint_address = staking_account.mint_address;
         stake_state_account.onwer_address = *ctx.accounts.authority.key;
         stake_state_account.total_staked = 0;
         stake_state_account.total_rewarded = 0;
@@ -56,15 +52,17 @@ mod tokenlock {
     }
 
     pub fn staking(
-        ctx: Context<Staking>
+        ctx: Context<Staking>,
+        amount: u64
     ) -> ProgramResult {
 
         let staking_account = &mut ctx.accounts.staking_account;
         let stake_state_account = &mut ctx.accounts.stake_state_account;
 
-        utils::transfer_spl(ctx.accounts.staker_account.to_account_info().key, 
-            ctx.accounts.escrow_account.tp_account_info().key, 
-            ctx.accounts.authority.key, amount, staking_account)?;
+        utils::transfer_spl(&ctx.accounts.staker_account.to_account_info(), 
+            &ctx.accounts.escrow_account.to_account_info(), 
+            &ctx.accounts.authority,
+            &ctx.accounts.token_program, amount, staking_account)?;
 
         //update staking data
         staking_account.total_staked = staking_account.total_staked + amount;
