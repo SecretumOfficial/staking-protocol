@@ -91,7 +91,6 @@ mod staking {
         if amount > pda_account.total_staked {
             return Err(StakingErrors::InSufficientEscrowBalance.into());
         }        
-        
 
         utils::transfer_spl(&ctx.accounts.escrow_account.to_account_info(), 
             &ctx.accounts.reclaimer.to_account_info(), 

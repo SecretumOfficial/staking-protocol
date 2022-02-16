@@ -1,0 +1,8 @@
+.anchor/
+tags
+target/
+Cargo.lock
+node_modules/
+package-lock.json
+config.*.json
+test-ledger/
