@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="widdiv=device-widdiv, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title></title>
+</head>
+
+  <section class="card">
+    <h2>Connect Wallet</h2>
+    <div class="flex">
+      <button id="connect_btn">Connect phantom wallet</button>
+      <div class="flex">
+        <p class="wallet_label">My address: </p>
+        <p id="wallet_address"></p>
+      </div>
+      <div class="flex">
+        <p class="wallet_label">Connect_network: </p>
+        <p class="wallet_new">devnet</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Create Mint(New SPL)</h2>
+    <div class="flex">
+      <div class="flex">
+        <p>Decimals:</p>
+        <input placeholder="SPL Token Decimals" type="number" id="mint_decimal" value="0" />
+      </div>
+      <button id="create_mint_btn">Create New Token</button>
+      
+      <div class="flex">
+        <p class="wallet_label" style="color: blue;">Mint address: </p>
+        <input class="address" id="mint_address" />
+      </div>      
+    </div>
+
+
+  <section class="card">
+    <h2>Accounts</h2>
+    <div class="flex">
+      <div>
+        <p>Accounts</p>
+        <textarea id="accounts"  class="accounts" row = "3"></textarea>
+      </div>
+      <div>
+        <p style="opacity:0">Refresh</p>
+        <button id="refresh_btn">Refresh</button>
+      </div>
+      <div>
+        <p style="opacity:0">New</p>
+        <button id="create_new_btn">Create New</button>
+      </div>
+    </div>
+  </section>  
+
+  <section class="card">
+    <h2>Transfer Token</h2>
+    <div class="flex">
+      <div>
+        <p>Account</p>
+        <input  placeholder="SPL Token address" id="transfer_to_address" class="address" />
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="acc_info_btn">AccountInfo</button>
+      </div>
+      <div>
+        <p>Balance</p>
+        <input  id="acc_info_bal" readonly/>
+      </div>
+      <div>
+        <p>To (SPL Token Account)</p>
+        <input placeholder="amount" id="transfer_amount" />
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="mintto_btn">Mintto</button>
+      </div>    
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="transfer_btn">Transfer</button>
+      </div>
+    </div>
+  </section>  
+
+  <br>
+  <br>
+  <section class="card">
+    <h2>Init Staking</h2>
+    <div class="flex">
+      <div>
+        <p>Reward percent</p>
+        <input id="reward_percent" value="10"/>
+      </div>
+      <div>
+        <p>Reward period(seconds)</p>
+        <input id="reward_period" value = "86400"/>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="init_staking_btn">Init Staking</button>
+      </div>
+      <div>
+        <p class="wallet_label" style="color: blue;">Staking PDA Account</p>
+        <input id="pda_address" class="address" placeholder="Staking pda address" />
+      </div>
+    </div>
+  </section>  
+
+  <section class="card">
+    <h2>Init My Staking State</h2>
+    <div class="flex">
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="init_state_btn">Init Staking State</button>
+      </div>
+      <div>
+        <p class="wallet_label" style="color: blue;">Staking State Account</p>
+        <input id="state_address" class="address" placeholder="Staking state address"/>
+      </div>
+    </div>
+  </section>  
+
+  <section class="card">
+    <h2>Staking/Unstaking</h2>
+    <div class="flex">
+      <div>
+        <p>Amount</p>
+        <input id="stake_amount" value="1000"/>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="staking_btn">Stake</button>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="unstaking_btn">Unstake</button>
+      </div>
+    </div>
+  </section>    
+
+  <section class="card">
+    <h2>PDA state</h2>
+    <button id="pda_state_btn">Refresh</button>
+    <div class="flex" style="margin-bottom: 10px">
+      <p class="wallet_label">total staked</p>
+      <p id="total_staked"></p>  
+      <p class="wallet_label">Reward percent</p>
+      <p id="reward_percent1"></p>  
+      <p class="wallet_label">Reward period</p>
+      <p id="reward_period1"></p>  
+    </div>
+  </section>
+
+
+  <section class="card">
+    <h2>My state</h2>
+    <button id="my_state_btn">Refresh</button>
+    <div class="flex" style="margin-bottom: 10px">
+      <p class="wallet_label">My staked</p>
+      <p id="my_staked"></p>  
+      <p class="wallet_label">My rewarded</p>
+      <p id="my_rewarded"></p>
+      <p class="wallet_label">Last Staked</p>
+      <p id="last_staked"></p>
+      <p class="wallet_label">Last Rewarded</p>
+      <p id="last_rewarded"></p>
+    </div>
+  </section>
+
+  <br>
+  <br>
+
+</body>
+
+</html>
