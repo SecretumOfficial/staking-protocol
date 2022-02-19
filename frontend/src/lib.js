@@ -23,57 +23,40 @@ function formatError(errors, err)
     return "unknown error";
 }
 
-async function getPdaAddress(mint, programid)
+async function getPdaAddress(mint, stakingData, programid)
 {
     let pda = await anchor.web3.PublicKey.findProgramAddress(
         [
-          Buffer.from("staking"),
+          Buffer.from("ser_staking"),
           mint.toBuffer(),
-          programid.toBuffer()
+          stakingData.toBuffer()
         ],
         programid
     );
     return pda[0];
 }
-async function getPdaAddressBump(mint, programid)
+
+async function getPdaAddressBump(mint, stakingData, programid)
 {
     let pda = await anchor.web3.PublicKey.findProgramAddress(
         [
-          Buffer.from("staking"),
+          Buffer.from("ser_staking"),
           mint.toBuffer(),
-          programid.toBuffer()
+          stakingData.toBuffer()
         ],
         programid
     );
     return pda[1];
 }
 
-async function getStateAddress(pda, wallet, programid)
-{
-    let pda = await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from("staking"),
-          pda.toBuffer(),
-          wallet.toBuffer()
-        ],
-        programid
-    );
-    return pda[0];
-}
-
 
 async function initialize(program, connection, 
-    reward_percent, reward_period_in_sec, mintAddress, signer){
+    reward_percent, reward_period_in_sec, mintAddress, signer){    
 
-    const pda = await getPdaAddress(mintAddress, program.programId);
-    const bump = await getPdaAddressBump(mintAddress, program.programId);
-    
-    //create pda account
-    const pda = await utils.createAccountByAcc(connection, signer, 1024, pda, programId);
-    if(pda == null)
-        return [null, 'creating staking pda failed!'];
-
+    const stakingData = anchor.web3.Keypair.generate();
+    const bump = await getPdaAddressBump(mintAddress, stakingData.publicKey, program.programId);
     //create escrowAccount
+    let pda = await getPdaAddress(mintAddress, stakingData.publicKey, program.programId);
     const escrow = await utils.createAssociatedTokenAccount(connection, mintAddress,
         signer, pda, true);
     
@@ -83,69 +66,66 @@ async function initialize(program, connection,
         bump,
         {
         accounts: {
-            pdaAccount: pda,
+            stakingData: stakingData.publicKey,
             authority: signer.publicKey,
             escrowAccount: escrow,
             tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
             mintAddress: mintAddress
         }
     });
 
-    const res = await utils.performInstructions(connection, signer, [inst]);
+    const res = await utils.performInstructions(connection, signer, [inst], [stakingData]);
     if(res[0])
-        return [pda, 'ok'];
+        return [stakingData.publicKey, 'ok'];
     return [null, formatError(program._idl.errors, res[1])];
 }
 
-async function initializeStakeState(program, connection, pda, signer){
+async function initializeStakeState(program, connection, stakingData, signer){
 
     //create state account
-    let state = await getStateAddress(pda, signer.publicKey, programId);
-    state = await utils.createAccountByAcc(connection, signer, 1024, state, programId);
-    if(state == null)
-        return [null, 'creating staking state failed!'];
-   
+    const state = anchor.web3.Keypair.generate();
     let inst = program.instruction.initializeStakeState(
         {
         accounts: {
-            pdaAccount: pda,
-            stakeStateAccount: state,
+            stakingData: stakingData,
+            stakeStateAccount: state.publicKey,
             authority: signer.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID
         }
     });
 
-    const res = await utils.performInstructions(connection, signer, [inst]);
+    const res = await utils.performInstructions(connection, signer, [inst], [state]);
     if(res[0])
-        return [state, 'ok'];
+        return [state.publicKey, 'ok'];
 
     return [null, formatError(program._idl.errors, res[1])];
 }
 
 
-async function staking(program, connection, pda, state, amount, signer){
+async function staking(program, connection, stakingDataAcc, state, amount, signer){
 
     //get info from pda
-    let stakingData = await program.account.stakingData.fetch(pda);
+    let stakingData = await program.account.stakingData.fetch(stakingDataAcc);
 
-    let stakerAcc = await utils.getAssociatedTokenAddress(stakingData.mintAddress, signer);
-    let info = await program.connection.getAccountInfo(stakerAcc);
+    let stakerAcc = await utils.getAssociatedTokenAddress(stakingData.mintAddress, signer.publicKey);
+    let info = await connection.getAccountInfo(stakerAcc);
     if(info==null)
     {
         return [null, 'token account doesn`t exit!'];
     }
    
-    let inst = program.instruction.staking(
-        new anchor.BN(amount),
-        {
-        accounts: {
-            pdaAccount: pda,
-            stakeStateAccount: state,
-            escrowAccount: stakingData.escrowAccount,
-            stakerAccount: stakerAcc,            
-            authority: signer.publicKey,
-            tokenProgram: TOKEN_PROGRAM_ID
-        }
+    let inst = program.instruction.staking(new anchor.BN(amount),
+        {accounts: 
+            {   
+                stakingData: stakingDataAcc,
+                stakeStateAccount: state,
+                escrowAccount: stakingData.escrowAccount,
+                stakerAccount: stakerAcc,            
+                authority: signer.publicKey,
+                tokenProgram: TOKEN_PROGRAM_ID
+            }
     });
 
     const res = await utils.performInstructions(connection, signer, [inst]);
@@ -156,18 +136,20 @@ async function staking(program, connection, pda, state, amount, signer){
 }
 
 
-async function unstaking(program, connection, pda, state, amount, signer){
+async function unstaking(program, connection, stakingDataAcc, state, amount, signer){
 
     //get info from pda
-    let stakingData = await program.account.stakingData.fetch(pda);
+    let stakingData = await program.account.stakingData.fetch(stakingDataAcc);
+    let pda = await getPdaAddress(stakingData.mintAddress, stakingDataAcc, program.programId);
     const reclaimer = await utils.getAssociatedTokenAddress(stakingData.mintAddress, signer.publicKey);
    
     let inst = program.instruction.unstaking(
         new anchor.BN(amount),
         {
         accounts: {
-            pdaAccount: pda,
+            stakingData: stakingDataAcc,
             stakeStateAccount: state,
+            pdaAccount: pda,
             escrowAccount: stakingData.escrowAccount,
             reclaimer: reclaimer,            
             authority: signer.publicKey,

@@ -41,26 +41,6 @@ async function createWallet(connection, wallet, lamports){
     return wallet;
 }
 
-async function createAccountByAcc(connection, signer, space, acc, progId = undefined)
-{
-    const balanceNeeded = await connection.getMinimumBalanceForRentExemption(space);
-    let instructions = [];
-    const inst = anchor.web3.SystemProgram.createAccount({
-        fromPubkey: signer.publicKey,
-        newAccountPubkey: acc,
-        lamports: balanceNeeded,
-        space: space,
-        programId: progId !=null? progId: spl_token.TOKEN_PROGRAM_ID
-      });      
-
-    instructions.push(inst);
-    const res = await performInstructions(connection, signer, instructions, [newAccount]);
-    if(res[0])
-        return acc;
-    return null;
-}
-
-
 async function createAccount(connection, signer, space, progId = undefined)
 {
     const newAccount = anchor.web3.Keypair.generate();
@@ -264,7 +244,6 @@ module.exports = {
     getAssociatedTokenAddress,
     createWallet,
     createAccount,
-    createAccountByAcc,
     createToken,
     createAssociatedTokenAccount,
     createTokenAccount,

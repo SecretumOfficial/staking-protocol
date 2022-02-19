@@ -2,7 +2,7 @@ import './style.css'
 import * as web3 from "@solana/web3.js";
 import * as splToken from "@solana/spl-token";
 import * as anchor from "@project-serum/anchor";
-import tokenlockIdl from './idl/tokenlock.json';
+import tokenlockIdl from './idl/staking.json';
 import {
   programId,
   URL
@@ -170,12 +170,12 @@ const initStaking = async () => {
   {
     alert(res[1]);
   }else{
-    document.getElementById("pda_address").value = res[0];
+    document.getElementById("staking_address").value = res[0];
   }
 }
 
 const initStakingState = async () => {
-  const pda = new web3.PublicKey(document.getElementById('pda_address').value);
+  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
   const anchor_provider = await getAnchorProvider();
@@ -192,7 +192,7 @@ const initStakingState = async () => {
 }
 
 const Staking = async () => {
-  const pda = new web3.PublicKey(document.getElementById('pda_address').value);
+  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
   const state = new web3.PublicKey(document.getElementById('state_address').value);  
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
@@ -211,7 +211,7 @@ const Staking = async () => {
 }
 
 const Unstaking = async () => {
-  const pda = new web3.PublicKey(document.getElementById('pda_address').value);
+  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
   const state = new web3.PublicKey(document.getElementById('state_address').value);  
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
@@ -233,17 +233,17 @@ const Unstaking = async () => {
 const stat_refresh = async () => {
   const anchor_provider = await getAnchorProvider();
   const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
-  const pda = new anchor.web3.PublicKey(document.getElementById("pda_address").value);
+  const pda = new anchor.web3.PublicKey(document.getElementById("staking_address").value);
   let stakingData = await program.account.stakingData.fetch(pda);
 
   document.getElementById('total_staked').innerHTML = stakingData.totalStaked.toNumber();
   document.getElementById('reward_percent1').innerHTML = stakingData.rewardPercent;
-  document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriod;
+  document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriodInSec;
 }
 
 
 const myStat = async () => {
-  const pda = new web3.PublicKey(document.getElementById('pda_address').value);
+  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
   const state = new web3.PublicKey(document.getElementById('state_address').value);  
   const connection = new web3.Connection(URL, 'confirmed');
   const anchor_provider = await getAnchorProvider();
@@ -286,7 +286,7 @@ const myStat = async () => {
   init_state_btn.addEventListener('click', initStakingState);
 
   const staking_btn = document.getElementById('staking_btn');  
-  staking_btn.addEventListener('click', initStakingState);
+  staking_btn.addEventListener('click', Staking);
 
   const unstaking_btn = document.getElementById('unstaking_btn');  
   unstaking_btn.addEventListener('click', Unstaking); 
