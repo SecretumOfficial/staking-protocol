@@ -169,7 +169,35 @@ async function staking(program, connection, stakingDataAcc, state, amount, signe
     return [null, formatError(program._idl.errors, res[1])];
 }
 
+async function funding(program, connection, stakingDataAcc, amount, signer){
 
+    //get info from pda
+    let stakingData = await program.account.stakingData.fetch(stakingDataAcc);
+
+    let funderAcc = await utils.getAssociatedTokenAddress(stakingData.mintAddress, signer.publicKey);
+    let info = await connection.getAccountInfo(funderAcc);
+    if(info==null)
+    {
+        return [null, 'token account doesn`t exit!'];
+    }
+   
+    let inst = program.instruction.funding(new anchor.BN(amount),
+        {accounts: 
+            {   
+                stakingData: stakingDataAcc,
+                rewarderAccount: stakingData.rewarderAccount,
+                funderAccount: funderAcc,            
+                authority: signer.publicKey,
+                tokenProgram: TOKEN_PROGRAM_ID
+            }
+    });
+
+    const res = await utils.performInstructions(connection, signer, [inst]);
+    if(res[0])
+        return [amount, 'ok'];
+
+    return [null, formatError(program._idl.errors, res[1])];
+}
 
 async function unstaking(program, connection, stakingDataAcc, state, amount, signer){
 
