@@ -256,7 +256,8 @@ async function get_now_ts(provider){
 module.exports = {
     initialize,
     initializeStakeState,
-    staking,
+    staking,    
     unstaking,
+    funding,
     get_now_ts,
 };
