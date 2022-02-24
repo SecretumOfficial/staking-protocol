@@ -19,6 +19,7 @@ mod staking {
         reward_percent: u8,
         reward_period_in_sec: u32,
         bump_seed: u8,
+        bump_seed1: u8,
     ) -> ProgramResult {
         let staking_data = &mut ctx.accounts.staking_data;
 
@@ -27,9 +28,13 @@ mod staking {
         staking_data.mint_address = *ctx.accounts.mint_address.key;
 
         staking_data.rewarder_balance = 0;
+        staking_data.total_funded = 0;
+        staking_data.total_reward_paid = 0;
+    
         staking_data.reward_percent = reward_percent;
         staking_data.reward_period_in_sec = reward_period_in_sec;
         staking_data.bump_seed = bump_seed;
+        staking_data.bump_seed_reward = bump_seed1;
         Ok(())
     }
 
@@ -85,8 +90,6 @@ mod staking {
 
         let staking_data = &mut ctx.accounts.staking_data;
         let stake_state_account = &mut ctx.accounts.stake_state_account;
-        msg!("unstaking");
-
         if amount > stake_state_account.total_staked {
             return Err(StakingErrors::InSufficientStakedBalance.into());            
         }
@@ -95,24 +98,41 @@ mod staking {
             return Err(StakingErrors::InSufficientEscrowBalance.into());
         }        
 
-        msg!("unstaking1");
         utils::transfer_spl(&ctx.accounts.escrow_account.to_account_info(), 
             &ctx.accounts.reclaimer.to_account_info(), 
             &ctx.accounts.pda_account.to_account_info(),
             &ctx.accounts.token_program, amount, staking_data)?;
 
-        msg!("unstaking2");
-
         //update staking data
         //let staking_data = &mut ctx.accounts.staking_data;        
         staking_data.total_staked = staking_data.total_staked - amount;
 
-        msg!("unstaking3");
         //update staking state
         stake_state_account.total_staked = stake_state_account.total_staked - amount;
-
-        msg!("unstaking4");
         Ok(())
     }
 
+
+
+    pub fn funding(
+        ctx: Context<Funding>,
+        amount: u64
+    ) -> ProgramResult {
+
+        if amount > ctx.accounts.funder_account.amount {
+            return Err(StakingErrors::InSufficientBalance.into());             
+        }
+
+        let staking_data = &mut ctx.accounts.staking_data;
+
+        utils::transfer_spl(&ctx.accounts.funder_account.to_account_info(), 
+            &ctx.accounts.rewarder_account.to_account_info(), 
+            &ctx.accounts.authority,
+            &ctx.accounts.token_program, amount, staking_data)?;
+
+        //update 
+        staking_data.total_funded = staking_data.total_funded + amount;
+        staking_data.rewarder_balance = staking_data.rewarder_balance + amount;
+        Ok(())
+    }    
 }
