@@ -238,6 +238,10 @@ const stat_refresh = async () => {
   document.getElementById('total_staked').innerHTML = stakingData.totalStaked.toNumber();
   document.getElementById('reward_percent1').innerHTML = stakingData.rewardPercent;
   document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriodInSec;  
+
+  document.getElementById('rewarder_balance').innerHTML = stakingData.rewarderBalance.toNumber();
+  document.getElementById('total_funded').innerHTML = stakingData.totalFunded;
+  document.getElementById('total_reward_paid').innerHTML = stakingData.totalRewardPaid;
 }
 
 
