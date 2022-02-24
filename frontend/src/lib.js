@@ -49,6 +49,32 @@ async function getPdaAddressBump(mint, stakingData, programid)
     return pda[1];
 }
 
+async function getPdaAddressOfRewarder(mint, stakingData, programid)
+{
+    let pda = await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from("ser_rewarder"),
+          mint.toBuffer(),
+          stakingData.toBuffer()
+        ],
+        programid
+    );
+    return pda[0];
+}
+
+async function getPdaAddressBumpOfRewarder(mint, stakingData, programid)
+{
+    let pda = await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from("ser_rewarder"),
+          mint.toBuffer(),
+          stakingData.toBuffer()
+        ],
+        programid
+    );
+    return pda[1];
+}
+
 
 async function initialize(program, connection, 
     reward_percent, reward_period_in_sec, mintAddress, signer){    
@@ -59,16 +85,24 @@ async function initialize(program, connection,
     let pda = await getPdaAddress(mintAddress, stakingData.publicKey, program.programId);
     const escrow = await utils.createAssociatedTokenAccount(connection, mintAddress,
         signer, pda, true);
+
+    const bumpRewarder = await getPdaAddressBumpOfRewarder(mintAddress, stakingData.publicKey, program.programId);
+    //create escrowAccount
+    let pdaRewarder= await getPdaAddressOfRewarder(mintAddress, stakingData.publicKey, program.programId);    
+    const rewarder = await utils.createAssociatedTokenAccount(connection, mintAddress,
+        signer, pdaRewarder, true);
     
     let inst = program.instruction.initialize(
         reward_percent, 
         reward_period_in_sec, 
         bump,
+        bumpRewarder,
         {
         accounts: {
             stakingData: stakingData.publicKey,
             authority: signer.publicKey,
             escrowAccount: escrow,
+            rewarderAccount: rewarder,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: anchor.web3.SystemProgram.programId,
             mintAddress: mintAddress
@@ -134,6 +168,7 @@ async function staking(program, connection, stakingDataAcc, state, amount, signe
 
     return [null, formatError(program._idl.errors, res[1])];
 }
+
 
 
 async function unstaking(program, connection, stakingDataAcc, state, amount, signer){
