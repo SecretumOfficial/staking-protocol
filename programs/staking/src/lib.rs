@@ -23,8 +23,10 @@ mod staking {
         let staking_data = &mut ctx.accounts.staking_data;
 
         staking_data.escrow_account = *ctx.accounts.escrow_account.to_account_info().key;
+        staking_data.rewarder_account = *ctx.accounts.rewarder_account.to_account_info().key;
         staking_data.mint_address = *ctx.accounts.mint_address.key;
 
+        staking_data.rewarder_balance = 0;
         staking_data.reward_percent = reward_percent;
         staking_data.reward_period_in_sec = reward_period_in_sec;
         staking_data.bump_seed = bump_seed;
