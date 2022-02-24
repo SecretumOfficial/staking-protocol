@@ -8,7 +8,11 @@ pub struct StakingData {
     pub escrow_account: Pubkey,
     pub rewarder_account: Pubkey,
     pub rewarder_balance: u64,
+    pub total_funded: u64,
+    pub total_reward_paid: u64,
+
     pub bump_seed: u8,
+    pub bump_seed_reward: u8,
     pub reward_percent: u8,
     pub reward_period_in_sec: u32, 
     pub total_staked: u64
@@ -17,7 +21,7 @@ pub struct StakingData {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = authority, space = 8 + 32 + 32 + 32 + 8 + 1 + 1 + 4 + 8)]
+    #[account(init, payer = authority, space = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 1 + 1 + 1 + 4 + 8)]
     pub staking_data: ProgramAccount<'info, StakingData>,
 
     #[account(mut)]
@@ -98,6 +102,30 @@ pub struct Staking<'info> {
     #[account(signer,
         constraint = stake_state_account.onwer_address == *authority.key,
     )]
+    pub authority: AccountInfo<'info>,
+
+    #[account(address = anchor_spl::token::ID)]
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Funding<'info> {
+    #[account(mut)]
+    pub staking_data: ProgramAccount<'info, StakingData>,
+
+    #[account(mut,
+        constraint = staking_data.rewarder_account == *rewarder_account.to_account_info().key,
+    )]
+    pub rewarder_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
+        constraint = *funder_account.to_account_info().owner == *token_program.key,
+        constraint = funder_account.mint == staking_data.mint_address,
+        constraint = funder_account.owner == *authority.key,
+    )]
+    pub funder_account: Account<'info, anchor_spl::token::TokenAccount>,
+            
+    #[account(signer,)]
     pub authority: AccountInfo<'info>,
 
     #[account(address = anchor_spl::token::ID)]
