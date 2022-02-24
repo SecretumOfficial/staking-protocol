@@ -21,6 +21,11 @@
           "isSigner": false
         },
         {
+          "name": "rewarderAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "mintAddress",
           "isMut": false,
           "isSigner": false
@@ -47,6 +52,10 @@
         },
         {
           "name": "bumpSeed",
+          "type": "u8"
+        },
+        {
+          "name": "bumpSeed1",
           "type": "u8"
         }
       ]
@@ -168,6 +177,42 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "funding",
+      "accounts": [
+        {
+          "name": "stakingData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rewarderAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "funderAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -185,7 +230,27 @@
             "type": "publicKey"
           },
           {
+            "name": "rewarderAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewarderBalance",
+            "type": "u64"
+          },
+          {
+            "name": "totalFunded",
+            "type": "u64"
+          },
+          {
+            "name": "totalRewardPaid",
+            "type": "u64"
+          },
+          {
             "name": "bumpSeed",
+            "type": "u8"
+          },
+          {
+            "name": "bumpSeedReward",
             "type": "u8"
           },
           {
@@ -278,8 +343,5 @@
       "name": "InSufficientEscrowBalance",
       "msg": "insufficient escrow balance"
     }
-  ],
-  "metadata": {
-    "address": "87hC1nD9L3WNJm4aXeboXXjps172pBLGMpvCYhVvw37p"
-  }
+  ]
 }
