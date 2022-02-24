@@ -6,6 +6,7 @@ use anchor_lang::prelude::*;
 pub struct StakingData {
     pub mint_address: Pubkey,
     pub escrow_account: Pubkey,
+    pub rewarder_account: Pubkey,    
     pub bump_seed: u8,
     pub reward_percent: u8,
     pub reward_period_in_sec: u32, 
@@ -15,7 +16,7 @@ pub struct StakingData {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = authority, space = 8 + 32 + 32 + 1 + 1 + 4 + 8)]
+    #[account(init, payer = authority, space = 8 + 32 + 32 + 32 + 1 + 1 + 4 + 8)]
     pub staking_data: ProgramAccount<'info, StakingData>,
 
     #[account(mut)]
@@ -26,6 +27,12 @@ pub struct Initialize<'info> {
         constraint = escrow_account.mint == *mint_address.key,
     )]
     pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
+        constraint = *rewarder_account.to_account_info().owner == *token_program.key,
+        constraint = rewarder_account.mint == *mint_address.key,
+    )]
+    pub rewarder_account: Account<'info, anchor_spl::token::TokenAccount>,
 
     pub mint_address: AccountInfo<'info>,
 

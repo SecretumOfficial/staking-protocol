@@ -27,13 +27,12 @@ const getProvider = async () => {
 };
 
 const connectWallet = async () => {
-  const connect = await getProvider();
-  if (connect) {
+  const provider = await getProvider();
+  if (provider) {
     try {
       const resp = await window.solana.connect();
       const addressElement = document.getElementById('wallet_address')
       addressElement.innerHTML = resp.publicKey.toString();
-      alert('Wallet connect');
     } catch (err) {
       console.log('err', err);
     }
@@ -238,7 +237,7 @@ const stat_refresh = async () => {
 
   document.getElementById('total_staked').innerHTML = stakingData.totalStaked.toNumber();
   document.getElementById('reward_percent1').innerHTML = stakingData.rewardPercent;
-  document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriodInSec;
+  document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriodInSec;  
 }
 
 

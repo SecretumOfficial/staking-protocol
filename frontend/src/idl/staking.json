@@ -1,0 +1,285 @@
+{
+  "version": "0.1.0",
+  "name": "staking",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "stakingData",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintAddress",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardPercent",
+          "type": "u8"
+        },
+        {
+          "name": "rewardPeriodInSec",
+          "type": "u32"
+        },
+        {
+          "name": "bumpSeed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeStakeState",
+      "accounts": [
+        {
+          "name": "stakingData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeStateAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "staking",
+      "accounts": [
+        {
+          "name": "stakingData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeStateAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakerAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unstaking",
+      "accounts": [
+        {
+          "name": "stakingData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeStateAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "reclaimer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "pdaAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StakingData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mintAddress",
+            "type": "publicKey"
+          },
+          {
+            "name": "escrowAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "bumpSeed",
+            "type": "u8"
+          },
+          {
+            "name": "rewardPercent",
+            "type": "u8"
+          },
+          {
+            "name": "rewardPeriodInSec",
+            "type": "u32"
+          },
+          {
+            "name": "totalStaked",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StakingState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stakingAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "mintAddress",
+            "type": "publicKey"
+          },
+          {
+            "name": "onwerAddress",
+            "type": "publicKey"
+          },
+          {
+            "name": "totalStaked",
+            "type": "u64"
+          },
+          {
+            "name": "totalRewarded",
+            "type": "u64"
+          },
+          {
+            "name": "lastStaked",
+            "type": "u64"
+          },
+          {
+            "name": "lastRewarded",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "EventInitialize",
+      "fields": [
+        {
+          "name": "xx",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidStakingAccount",
+      "msg": "invalid staking account data"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidStakingStateAccount",
+      "msg": "invalid staking state account data"
+    },
+    {
+      "code": 6002,
+      "name": "InSufficientBalance",
+      "msg": "insufficient balance"
+    },
+    {
+      "code": 6003,
+      "name": "InSufficientStakedBalance",
+      "msg": "insufficient staked balance"
+    },
+    {
+      "code": 6004,
+      "name": "InSufficientEscrowBalance",
+      "msg": "insufficient escrow balance"
+    }
+  ],
+  "metadata": {
+    "address": "87hC1nD9L3WNJm4aXeboXXjps172pBLGMpvCYhVvw37p"
+  }
+}
