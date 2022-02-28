@@ -154,14 +154,23 @@ mod staking {
     }
 
 
+    pub fn funding(ctx: Context<Funding>, amount: u64, timeframe_in_second) -> ProgramResult {
+        let staking_data = &mut ctx.accounts.staking_data;
+        let total_staked = staking_data.total_staked;
 
-    pub fn funding(ctx: Context<Funding>, amount: u64) -> ProgramResult {
+        //first calc reward
+        if staking_data.timeframe_in_second > 0{
+            
+
+        }
+
+
+
 
         if amount > ctx.accounts.funder_account.amount {
             return Err(StakingErrors::InSufficientBalance.into());             
         }
-
-        let staking_data = &mut ctx.accounts.staking_data;
+        
 
         utils::transfer_spl(&ctx.accounts.funder_account.to_account_info(), 
             &ctx.accounts.rewarder_account.to_account_info(), 
@@ -169,8 +178,18 @@ mod staking {
             &ctx.accounts.token_program, amount, staking_data)?;
 
         //update 
+        // pub timeframe_in_second: u64,
+        // pub timeframe_started: u64,
+        // pub pool_reward: u64,
+        // pub payout_reward: u64,
+        // pub apy_max: u32,
+    
+        staking_data.pool_reward = amount;
         staking_data.total_funded = staking_data.total_funded + amount;
         staking_data.rewarder_balance = staking_data.rewarder_balance + amount;
+        staking_data.timeframe_in_second = timeframe_in_second
+        let now_ts = Clock::get()?.unix_timestamp as u64;
+        staking_data.timeframe_started = now_ts;
         Ok(())
     }
 }
