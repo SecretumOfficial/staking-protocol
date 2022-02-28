@@ -37,7 +37,7 @@ pub struct StakingData {
 }
 
 impl StakingData{
-    pub const MAX_STAKERS: u32 = 385;
+    pub const MAX_STAKERS: usize = 385;
 
     pub fn index_of_staker(&self, crc: u32) -> i32{
         for i in 0..self.stakers.len() {
@@ -79,6 +79,13 @@ pub struct Initialize<'info> {
 }
 
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct StakerHistoryEntry {
+    pub time:   u64,
+    pub action: u8,  //0 staking, 1: unstaking, 2: claim rewarding
+    pub amount: u64,
+}
+
 #[account]
 #[derive(Default)]
 pub struct StakingState {
@@ -89,8 +96,24 @@ pub struct StakingState {
     pub total_staked: u64,
     pub total_rewarded: u64,
     pub last_staked: u64,
-    pub last_rewarded: u64,    
+    pub last_rewarded: u64,
+    pub history: Vec<StakerHistoryEntry>
 }
+
+impl StakingState{
+    pub const MAX_HISTORY: usize = 588;
+
+    pub fn add_history(&mut self, time: u64, action: u8, amount: u64)-> ()
+    {
+        if self.history.len() >= StakingState::MAX_HISTORY {
+            self.history.remove(0);
+        }
+        self.history.push(StakerHistoryEntry{
+            time: time, action: action, amount: amount
+        });
+    }
+}
+
 
 #[derive(Accounts)]
 pub struct InitializeStakeState<'info> {
