@@ -14,6 +14,9 @@ pub enum StakingErrors {
     #[msg("invalid staking state account data. Desn`t match amount!")]
     InvalidStakingStateAccountDosentMatchAmount,
 
+    #[msg("reached max stakers = 385!")]
+    ReachedMaxStakers,
+
     #[msg("insufficient balance")]
     InSufficientBalance,
 

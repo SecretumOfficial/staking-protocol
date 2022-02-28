@@ -62,6 +62,7 @@ mod staking {
         stake_state_account.total_rewarded = 0;
         stake_state_account.last_staked = 0;
         stake_state_account.last_rewarded = 0;
+        stake_state_account.history = vec![];
         Ok(())
     }
 
@@ -75,6 +76,10 @@ mod staking {
         let stake_state_account = &mut ctx.accounts.stake_state_account;
         let staker_index = staking_data.index_of_staker(stake_state_account.my_crc);
 
+        if staker_index < 0 && staking_data.stakers.len() >= StakingData::MAX_STAKERS {
+            return Err(StakingErrors::ReachedMaxStakers.into());
+        }
+
         utils::transfer_spl(&ctx.accounts.staker_account.to_account_info(), 
             &ctx.accounts.escrow_account.to_account_info(), 
             &ctx.accounts.authority,
@@ -84,11 +89,12 @@ mod staking {
         staking_data.total_staked = staking_data.total_staked + amount;
 
         //update staking state
-        let now_ts = Clock::get()?.unix_timestamp as u64;             
+        let now_ts = Clock::get()?.unix_timestamp as u64;
         stake_state_account.total_staked = stake_state_account.total_staked + amount;
         stake_state_account.last_staked = now_ts;
+        stake_state_account.add_history(now_ts, 0, amount);
 
-        if staker_index < 0{
+        if staker_index < 0{            
             let new_staker = StakerState {
                 staker_crc: stake_state_account.my_crc,
                 staked_time: now_ts,
@@ -114,11 +120,6 @@ mod staking {
             return Err(StakingErrors::InvalidStakingStateAccountCantFindEntry.into());
         }
 
-        let staker = staking_data.stakers.get_mut(staker_index) .unwrap();
-        if staker.staked_amount != stake_state_account.total_staked{
-            return Err(StakingErrors::InvalidStakingStateAccountDosentMatchAmount.into());
-        }
-
         if amount > stake_state_account.total_staked {
             return Err(StakingErrors::InSufficientStakedBalance.into());            
         }
@@ -136,7 +137,8 @@ mod staking {
         //let staking_data = &mut ctx.accounts.staking_data;        
         staking_data.total_staked = staking_data.total_staked - amount;
 
-        //update staker state
+        //update staker state        
+        let staker = staking_data.stakers.get_mut(staker_index as usize).unwrap();        
         if staker.staked_amount == amount{ 
             //unstaking all, remove entry            
             staking_data.stakers.remove(staker_index as usize);
@@ -146,6 +148,8 @@ mod staking {
 
         //update staking state
         stake_state_account.total_staked = stake_state_account.total_staked - amount;
+        let now_ts = Clock::get()?.unix_timestamp as u64;
+        stake_state_account.add_history(now_ts, 1, amount);
         Ok(())
     }
 
