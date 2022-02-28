@@ -8,6 +8,12 @@ pub enum StakingErrors {
     #[msg("invalid staking state account data")]
     InvalidStakingStateAccount,
 
+    #[msg("invalid staking state account data. Can`t find entry!")]
+    InvalidStakingStateAccountCantFindEntry,
+
+    #[msg("invalid staking state account data. Desn`t match amount!")]
+    InvalidStakingStateAccountDosentMatchAmount,
+
     #[msg("insufficient balance")]
     InSufficientBalance,
 
