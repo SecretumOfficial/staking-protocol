@@ -1,9 +1,17 @@
 use anchor_lang::prelude::*;
 //use anchor_lang::solana_program::*;
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct StakerState {
+    pub staker_crc: u32,
+    pub staked_time: u64,
+    pub staked_amount: u64,
+    pub gained_reward: u64,
+}
+
 #[account]
 #[derive(Default)]
-pub struct StakingData {
+pub struct StakingData {    
     pub mint_address: Pubkey,
     pub escrow_account: Pubkey,
     pub rewarder_account: Pubkey,
@@ -15,13 +23,36 @@ pub struct StakingData {
     pub bump_seed_reward: u8,
     pub reward_percent: u8,
     pub reward_period_in_sec: u32, 
-    pub total_staked: u64
+    pub total_staked: u64,
+
+    //funding 
+    pub timeframe_in_second: u64,
+    pub timeframe_started: u64,
+    pub pool_reward: u64,
+    pub payout_reward: u64,
+    pub apy_max: u32,
+
+    //stakers
+    pub stakers: Vec<StakerState>
+}
+
+impl StakingData{
+    pub const MAX_STAKERS: u32 = 385;
+
+    pub fn index_of_staker(&self, crc: u32) -> i32{
+        for i in 0..self.stakers.len() {
+            if crc == self.stakers[i].staker_crc {
+                return i as i32;
+            }
+        }
+        return -1;
+    }
 }
 
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = authority, space = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 1 + 1 + 1 + 4 + 8)]
+    #[account(init, payer = authority, space = 10240)]
     pub staking_data: ProgramAccount<'info, StakingData>,
 
     #[account(mut)]
@@ -52,19 +83,20 @@ pub struct Initialize<'info> {
 #[derive(Default)]
 pub struct StakingState {
     pub staking_account: Pubkey,
+    pub my_crc: u32,
     pub mint_address: Pubkey,    
     pub onwer_address: Pubkey,
     pub total_staked: u64,
     pub total_rewarded: u64,
     pub last_staked: u64,
-    pub last_rewarded: u64,
+    pub last_rewarded: u64,    
 }
 
 #[derive(Accounts)]
 pub struct InitializeStakeState<'info> {
     pub staking_data: ProgramAccount<'info, StakingData>,
 
-    #[account(init, payer = authority, space = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 8)]
+    #[account(init, payer = authority, space = 8 + 32 + 4 + 32 + 32 + 8 + 8 + 8 + 8)]
     pub stake_state_account: ProgramAccount<'info, StakingState>,
 
     #[account(signer)]
