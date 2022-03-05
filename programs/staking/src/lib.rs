@@ -17,8 +17,7 @@ mod staking {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        reward_percent: u8,
-        reward_period_in_sec: u32,
+        apy_max: u32,
         bump_seed: u8,
         bump_seed1: u8,
     ) -> ProgramResult {
@@ -32,8 +31,6 @@ mod staking {
         staking_data.total_funded = 0;
         staking_data.total_reward_paid = 0;
     
-        staking_data.reward_percent = reward_percent;
-        staking_data.reward_period_in_sec = reward_period_in_sec;
         staking_data.bump_seed = bump_seed;
         staking_data.bump_seed_reward = bump_seed1;
 
@@ -41,8 +38,8 @@ mod staking {
         staking_data.timeframe_started = 0;
         staking_data.pool_reward = 0;
         staking_data.payout_reward = 0;
-        staking_data.apy_max = 0;    
-        staking_data.stakers = vec![];
+        staking_data.apy_max = apy_max;    
+        staking_data.stakers = Vec::new();
         Ok(())
     }
 
@@ -154,20 +151,60 @@ mod staking {
     }
 
 
-    pub fn funding(ctx: Context<Funding>, amount: u64, timeframe_in_second) -> ProgramResult {
+    pub fn funding(ctx: Context<Funding>, amount: u64, timeframe_in_second: u64) -> ProgramResult {
         let staking_data = &mut ctx.accounts.staking_data;
         let total_staked = staking_data.total_staked;
+        let apy_max = staking_data.apy_max;
+        let now_ts = Clock::get()?.unix_timestamp as u64;
+        let mut pool_rest: u64 = 0;
+        let mut total_reward: u64 = 0;
+        let timeframe_started = staking_data.timeframe_started;
+        let timeframe = staking_data.timeframe_in_second;
+        let pool_reward = staking_data.pool_reward;
 
-        //first calc reward
-        if staking_data.timeframe_in_second > 0{
+        //calc reward
+        if timeframe > 0{
+            let mut frame_end_time = staking_data.timeframe_started + timeframe;
+            if now_ts < frame_end_time {
+                frame_end_time = now_ts;
+            }
             
+            for i in 0..staking_data.stakers.len(){
+                let staker = staking_data.stakers.get_mut(i).unwrap();
+                if staker.staked_amount == 0 || staker.staked_time >= frame_end_time{
+                    continue;
+                }
 
+                let mut seconds = timeframe;
+                if staker.staked_time > timeframe_started {
+                    seconds = frame_end_time - staker.staked_time;
+                }
+                let days: f64 = (seconds as f64)/ ((3600 * 24) as f64);
+                let frame_days: f64 = (seconds as f64) / ((3600 * 24) as f64);
+                let gained_total: f64 = (pool_reward as f64) * days * (staker.staked_amount as f64)/ (frame_days * total_staked as f64);
+                let gained_per_day: f64 = gained_total / days;
+                let staked_per_day: f64 = (staker.staked_amount as f64) / days;
+                let mut gained_percent_per_day: f64 = gained_per_day * 100.00 / staked_per_day;
+                let apd_max = (apy_max as f64) / 365.50;
+
+                if gained_percent_per_day > apd_max{
+                    gained_percent_per_day = apd_max;
+                }
+
+                let gained = (gained_percent_per_day * staked_per_day * days / 100.00) as u64;
+
+                staker.gained_reward = staker.gained_reward + gained;
+                total_reward = total_reward + gained;
+            }
+
+            staking_data.total_reward_paid = staking_data.total_reward_paid + total_reward;
+            staking_data.payout_reward = staking_data.payout_reward + total_reward;
+
+            pool_rest = staking_data.pool_reward - total_reward;
         }
 
-
-
-
-        if amount > ctx.accounts.funder_account.amount {
+        let real_fund_amount = amount - pool_rest;
+        if real_fund_amount > ctx.accounts.funder_account.amount {
             return Err(StakingErrors::InSufficientBalance.into());             
         }
         
@@ -175,20 +212,13 @@ mod staking {
         utils::transfer_spl(&ctx.accounts.funder_account.to_account_info(), 
             &ctx.accounts.rewarder_account.to_account_info(), 
             &ctx.accounts.authority,
-            &ctx.accounts.token_program, amount, staking_data)?;
-
-        //update 
-        // pub timeframe_in_second: u64,
-        // pub timeframe_started: u64,
-        // pub pool_reward: u64,
-        // pub payout_reward: u64,
-        // pub apy_max: u32,
+            &ctx.accounts.token_program, real_fund_amount, staking_data)?;
     
-        staking_data.pool_reward = amount;
-        staking_data.total_funded = staking_data.total_funded + amount;
-        staking_data.rewarder_balance = staking_data.rewarder_balance + amount;
-        staking_data.timeframe_in_second = timeframe_in_second
-        let now_ts = Clock::get()?.unix_timestamp as u64;
+        staking_data.payout_reward = staking_data.payout_reward + total_reward;
+        staking_data.pool_reward = pool_rest + real_fund_amount;
+        staking_data.total_funded = staking_data.total_funded + real_fund_amount;
+        staking_data.rewarder_balance = staking_data.rewarder_balance + real_fund_amount;
+        staking_data.timeframe_in_second = timeframe_in_second;
         staking_data.timeframe_started = now_ts;
         Ok(())
     }

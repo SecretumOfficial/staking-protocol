@@ -21,8 +21,6 @@ pub struct StakingData {
 
     pub bump_seed: u8,
     pub bump_seed_reward: u8,
-    pub reward_percent: u8,
-    pub reward_period_in_sec: u32, 
     pub total_staked: u64,
 
     //funding 
