@@ -218,3 +218,36 @@ pub struct Unstaking<'info> {
     #[account(address = anchor_spl::token::ID)]
     pub token_program: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct Claiming<'info> {
+    #[account(mut)]
+    pub staking_data: ProgramAccount<'info, StakingData>,
+
+    #[account(mut,
+        constraint = *staking_data.to_account_info().key == stake_state_account.staking_account,
+    )]
+    pub stake_state_account: ProgramAccount<'info, StakingState>,
+
+    #[account(mut,
+        constraint = staking_data.rewarder_account == *rewarder_account.to_account_info().key,
+    )]
+    pub rewarder_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
+        constraint = *claimer.to_account_info().owner == *token_program.key,
+        constraint = claimer.mint == staking_data.mint_address,
+        constraint = claimer.owner == *authority.key,
+    )]
+    pub claimer: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(signer,
+        constraint = stake_state_account.onwer_address == *authority.key,
+    )]
+    pub authority: AccountInfo<'info>,
+
+    pub pda_account: AccountInfo<'info>,    
+
+    #[account(address = anchor_spl::token::ID)]
+    pub token_program: AccountInfo<'info>,
+}

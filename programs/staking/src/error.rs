@@ -25,4 +25,14 @@ pub enum StakingErrors {
 
     #[msg("insufficient escrow balance")]
     InSufficientEscrowBalance,
+
+    #[msg("insufficient gained reward")]
+    InSufficientGainedReward,
+
+    #[msg("insufficient rewarder reward")]
+    InSufficientRewarderBalance,
+
+    #[msg("exist un-claimed reward")]
+    ExistUnClaimedReward,
+
 }

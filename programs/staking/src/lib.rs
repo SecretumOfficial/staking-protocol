@@ -80,7 +80,9 @@ mod staking {
         utils::transfer_spl(&ctx.accounts.staker_account.to_account_info(), 
             &ctx.accounts.escrow_account.to_account_info(), 
             &ctx.accounts.authority,
-            &ctx.accounts.token_program, amount, staking_data)?;
+            &ctx.accounts.token_program, 
+            amount,
+            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
 
         //update staking data
         staking_data.total_staked = staking_data.total_staked + amount;
@@ -125,10 +127,16 @@ mod staking {
             return Err(StakingErrors::InSufficientEscrowBalance.into());
         }        
 
+        let staker_data = staking_data.stakers.get(staker_index as usize).unwrap();   
+        if staker_data.gained_reward > 0 {
+            return Err(StakingErrors::ExistUnClaimedReward.into());
+        }
+
         utils::transfer_spl(&ctx.accounts.escrow_account.to_account_info(), 
             &ctx.accounts.reclaimer.to_account_info(), 
             &ctx.accounts.pda_account.to_account_info(),
-            &ctx.accounts.token_program, amount, staking_data)?;
+            &ctx.accounts.token_program, amount, 
+            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
 
         //update staking data
         //let staking_data = &mut ctx.accounts.staking_data;        
@@ -147,6 +155,48 @@ mod staking {
         stake_state_account.total_staked = stake_state_account.total_staked - amount;
         let now_ts = Clock::get()?.unix_timestamp as u64;
         stake_state_account.add_history(now_ts, 1, amount);
+        Ok(())
+    }
+
+    pub fn claim_reward(ctx: Context<Claiming>, amount: u64) -> ProgramResult {
+        let staking_data = &mut ctx.accounts.staking_data;
+        let stake_state_account = &mut ctx.accounts.stake_state_account;
+        let staker_index = staking_data.index_of_staker(stake_state_account.my_crc);
+
+        if staker_index < 0 {
+            return Err(StakingErrors::InvalidStakingStateAccountCantFindEntry.into());
+        }
+
+        let staker_data = staking_data.stakers.get(staker_index as usize).unwrap();
+
+        if amount > staker_data.gained_reward {
+            return Err(StakingErrors::InSufficientGainedReward.into());            
+        }
+
+        if amount > staking_data.payout_reward {
+            return Err(StakingErrors::InSufficientRewarderBalance.into());
+        }        
+
+        utils::transfer_spl(&ctx.accounts.rewarder_account.to_account_info(), 
+            &ctx.accounts.claimer.to_account_info(), 
+            &ctx.accounts.pda_account.to_account_info(),
+            &ctx.accounts.token_program, amount, 
+            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed_reward
+        )?;
+
+        //update staking data
+        //let staking_data = &mut ctx.accounts.staking_data;        
+        staking_data.total_reward_paid = staking_data.total_reward_paid + amount;
+
+        //update staker state        
+        let staker = staking_data.stakers.get_mut(staker_index as usize).unwrap();        
+        staker.gained_reward = staker.gained_reward - amount;        
+
+        //update staking state
+        stake_state_account.total_rewarded = stake_state_account.total_rewarded + amount;
+        let now_ts = Clock::get()?.unix_timestamp as u64;
+        stake_state_account.last_rewarded = now_ts;
+        stake_state_account.add_history(now_ts, 2, amount);
         Ok(())
     }
 
@@ -212,7 +262,9 @@ mod staking {
         utils::transfer_spl(&ctx.accounts.funder_account.to_account_info(), 
             &ctx.accounts.rewarder_account.to_account_info(), 
             &ctx.accounts.authority,
-            &ctx.accounts.token_program, real_fund_amount, staking_data)?;
+            &ctx.accounts.token_program, 
+            real_fund_amount, 
+            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
     
         staking_data.payout_reward = staking_data.payout_reward + total_reward;
         staking_data.pool_reward = pool_rest + real_fund_amount;
