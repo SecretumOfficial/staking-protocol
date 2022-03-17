@@ -22,6 +22,7 @@ pub struct StakerState {
 #[derive(Default)]
 pub struct StakingData {
     pub initializer: Pubkey,
+    pub funder_authority: Pubkey,
     pub mint_address: Pubkey,
     pub escrow_account: Pubkey,
     pub rewarder_account: Pubkey,
@@ -65,6 +66,8 @@ pub struct Initialize<'info> {
         payer = authority, 
         space = 10240)]
     pub staking_data: ProgramAccount<'info, StakingData>,
+
+    pub funder_authority: AccountInfo<'info>,
 
     #[account(
         init,
@@ -233,7 +236,10 @@ pub struct Funding<'info> {
     )]
     pub funder_account: Account<'info, anchor_spl::token::TokenAccount>,
             
-    #[account(mut, signer)]
+    #[account(mut, 
+        signer,
+        constraint = staking_data.funder_authority == *authority.key,
+    )]
     pub authority: AccountInfo<'info>,
 
     #[account(address = anchor_spl::token::ID)]

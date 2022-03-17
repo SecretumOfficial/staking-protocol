@@ -26,6 +26,7 @@ mod staking {
         let staking_data = &mut ctx.accounts.staking_data;
 
         staking_data.initializer = *ctx.accounts.authority.key;
+        staking_data.funder_authority = *ctx.accounts.funder_authority.key;
         staking_data.escrow_account = *ctx.accounts.escrow_account.to_account_info().key;
         staking_data.rewarder_account = *ctx.accounts.rewarder_account.to_account_info().key;
         staking_data.mint_address = *ctx.accounts.mint_address.key;
