@@ -1,10 +1,14 @@
 use anchor_lang::prelude::*;
+use anchor_spl::{
+    token::{self},
+};
+use spl_token::instruction::AuthorityType;
 use crc::crc32;
+
 
 pub mod account;
 pub mod error;
 pub mod event;
-pub mod utils;
 
 use crate::account::*;
 use crate::error::*;
@@ -18,11 +22,10 @@ mod staking {
     pub fn initialize(
         ctx: Context<Initialize>,
         apy_max: u32,
-        bump_seed: u8,
-        bump_seed1: u8,
     ) -> ProgramResult {
         let staking_data = &mut ctx.accounts.staking_data;
 
+        staking_data.initializer = *ctx.accounts.authority.key;
         staking_data.escrow_account = *ctx.accounts.escrow_account.to_account_info().key;
         staking_data.rewarder_account = *ctx.accounts.rewarder_account.to_account_info().key;
         staking_data.mint_address = *ctx.accounts.mint_address.key;
@@ -30,9 +33,6 @@ mod staking {
         staking_data.rewarder_balance = 0;
         staking_data.total_funded = 0;
         staking_data.total_reward_paid = 0;
-    
-        staking_data.bump_seed = bump_seed;
-        staking_data.bump_seed_reward = bump_seed1;
 
         staking_data.timeframe_in_second = 0;
         staking_data.timeframe_started = 0;
@@ -40,6 +40,21 @@ mod staking {
         staking_data.payout_reward = 0;
         staking_data.apy_max = apy_max;    
         staking_data.stakers = Vec::new();
+
+        let (authority, authority_bump) =
+            Pubkey::find_program_address(&[STAKING_AUTH_PDA_SEED, staking_data.to_account_info().key.as_ref()], ctx.program_id);
+        staking_data.bump_auth = authority_bump;
+
+        token::set_authority(
+            ctx.accounts.into_set_escrow_authority_context(),
+            AuthorityType::AccountOwner, Some(authority),
+        )?;
+
+        token::set_authority(
+            ctx.accounts.into_set_rewarder_authority_context(),
+            AuthorityType::AccountOwner, Some(authority),
+        )?;       
+
         Ok(())
     }
 
@@ -69,42 +84,38 @@ mod staking {
             return Err(StakingErrors::InSufficientBalance.into());             
         }
 
-        let staking_data = &mut ctx.accounts.staking_data;
-        let stake_state_account = &mut ctx.accounts.stake_state_account;
-        let staker_index = staking_data.index_of_staker(stake_state_account.my_crc);
+        let staker_index = ctx.accounts.staking_data.index_of_staker(ctx.accounts.stake_state_account.my_crc);
 
-        if staker_index < 0 && staking_data.stakers.len() >= StakingData::MAX_STAKERS {
+        if staker_index < 0 && ctx.accounts.staking_data.stakers.len() >= StakingData::MAX_STAKERS {
             return Err(StakingErrors::ReachedMaxStakers.into());
         }
 
-        utils::transfer_spl(&ctx.accounts.staker_account.to_account_info(), 
-            &ctx.accounts.escrow_account.to_account_info(), 
-            &ctx.accounts.authority,
-            &ctx.accounts.token_program, 
+        token::transfer(
+            ctx.accounts.into_transfer_to_escrow_context(),
             amount,
-            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
-
+        )?;
+        
         //update staking data
-        staking_data.total_staked = staking_data.total_staked + amount;
+        ctx.accounts.staking_data.total_staked = ctx.accounts.staking_data.total_staked + amount;
 
         //update staking state
         let now_ts = Clock::get()?.unix_timestamp as u64;
-        stake_state_account.total_staked = stake_state_account.total_staked + amount;
-        stake_state_account.last_staked = now_ts;
-        stake_state_account.add_history(now_ts, 0, amount);
+        ctx.accounts.stake_state_account.total_staked = ctx.accounts.stake_state_account.total_staked + amount;
+        ctx.accounts.stake_state_account.last_staked = now_ts;
+        ctx.accounts.stake_state_account.add_history(now_ts, 0, amount);
 
         if staker_index < 0{            
             let new_staker = StakerState {
-                staker_crc: stake_state_account.my_crc,
+                staker_crc: ctx.accounts.stake_state_account.my_crc,
                 staked_time: now_ts,
-                staked_amount: stake_state_account.total_staked,
+                staked_amount: ctx.accounts.stake_state_account.total_staked,
                 gained_reward: 0
             };
-            staking_data.stakers.push(new_staker);
+            ctx.accounts.staking_data.stakers.push(new_staker);
         }else {
-            let staker = staking_data.stakers.get_mut(staker_index as usize).unwrap();
+            let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();
             staker.staked_time = now_ts;
-            staker.staked_amount = stake_state_account.total_staked;
+            staker.staked_amount = ctx.accounts.stake_state_account.total_staked;
         }
         Ok(())
     }
@@ -112,115 +123,115 @@ mod staking {
 
     pub fn unstaking(ctx: Context<Unstaking>, amount: u64) -> ProgramResult {
 
-        let staking_data = &mut ctx.accounts.staking_data;
-        let stake_state_account = &mut ctx.accounts.stake_state_account;
-        let staker_index = staking_data.index_of_staker(stake_state_account.my_crc);
+        let staker_index = ctx.accounts.staking_data.index_of_staker(ctx.accounts.stake_state_account.my_crc);
         if staker_index < 0 {
             return Err(StakingErrors::InvalidStakingStateAccountCantFindEntry.into());
         }
 
-        if amount > stake_state_account.total_staked {
+        if amount > ctx.accounts.stake_state_account.total_staked {
             return Err(StakingErrors::InSufficientStakedBalance.into());            
         }
 
-        if amount > staking_data.total_staked {
+        if amount > ctx.accounts.staking_data.total_staked {
             return Err(StakingErrors::InSufficientEscrowBalance.into());
         }        
 
-        let staker_data = staking_data.stakers.get(staker_index as usize).unwrap();   
+        let staker_data = ctx.accounts.staking_data.stakers.get(staker_index as usize).unwrap();   
         if staker_data.gained_reward > 0 {
             return Err(StakingErrors::ExistUnClaimedReward.into());
         }
 
-        utils::transfer_spl(&ctx.accounts.escrow_account.to_account_info(), 
-            &ctx.accounts.reclaimer.to_account_info(), 
-            &ctx.accounts.pda_account.to_account_info(),
-            &ctx.accounts.token_program, amount, 
-            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
+        let authority_seeds = &[&STAKING_AUTH_PDA_SEED[..], ctx.accounts.staking_data.to_account_info().key.as_ref(), &[ctx.accounts.staking_data.bump_auth]];
+        token::transfer(
+            ctx.accounts
+                .into_transfer_to_staker_context()
+                .with_signer(&[&authority_seeds[..]]),
+                amount,
+        )?;
 
         //update staking data
         //let staking_data = &mut ctx.accounts.staking_data;        
-        staking_data.total_staked = staking_data.total_staked - amount;
+        ctx.accounts.staking_data.total_staked = ctx.accounts.staking_data.total_staked - amount;
 
         //update staker state        
-        let staker = staking_data.stakers.get_mut(staker_index as usize).unwrap();        
+        let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
         if staker.staked_amount == amount{ 
             //unstaking all, remove entry            
-            staking_data.stakers.remove(staker_index as usize);
+            ctx.accounts.staking_data.stakers.remove(staker_index as usize);
         }else{
             staker.staked_amount = staker.staked_amount - amount;
         }
 
         //update staking state
-        stake_state_account.total_staked = stake_state_account.total_staked - amount;
+        ctx.accounts.stake_state_account.total_staked = ctx.accounts.stake_state_account.total_staked - amount;
         let now_ts = Clock::get()?.unix_timestamp as u64;
-        stake_state_account.add_history(now_ts, 1, amount);
+        ctx.accounts.stake_state_account.add_history(now_ts, 1, amount);
         Ok(())
     }
 
     pub fn claim_reward(ctx: Context<Claiming>, amount: u64) -> ProgramResult {
-        let staking_data = &mut ctx.accounts.staking_data;
-        let stake_state_account = &mut ctx.accounts.stake_state_account;
-        let staker_index = staking_data.index_of_staker(stake_state_account.my_crc);
+
+
+        let staker_index = ctx.accounts.staking_data.index_of_staker(ctx.accounts.stake_state_account.my_crc);
 
         if staker_index < 0 {
             return Err(StakingErrors::InvalidStakingStateAccountCantFindEntry.into());
         }
 
-        let staker_data = staking_data.stakers.get(staker_index as usize).unwrap();
+        let staker_data = ctx.accounts.staking_data.stakers.get(staker_index as usize).unwrap();
 
         if amount > staker_data.gained_reward {
             return Err(StakingErrors::InSufficientGainedReward.into());            
         }
 
-        if amount > staking_data.payout_reward {
+        if amount > ctx.accounts.staking_data.payout_reward {
             return Err(StakingErrors::InSufficientRewarderBalance.into());
         }        
 
-        utils::transfer_spl(&ctx.accounts.rewarder_account.to_account_info(), 
-            &ctx.accounts.claimer.to_account_info(), 
-            &ctx.accounts.pda_account.to_account_info(),
-            &ctx.accounts.token_program, amount, 
-            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed_reward
+        let authority_seeds = &[&STAKING_AUTH_PDA_SEED[..], ctx.accounts.staking_data.to_account_info().key.as_ref(), &[ctx.accounts.staking_data.bump_auth]];
+        token::transfer(
+            ctx.accounts
+                .into_transfer_to_claimer_context()
+                .with_signer(&[&authority_seeds[..]]),
+                amount,
         )?;
 
         //update staking data
         //let staking_data = &mut ctx.accounts.staking_data;        
-        staking_data.total_reward_paid = staking_data.total_reward_paid + amount;
+        ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + amount;
 
         //update staker state        
-        let staker = staking_data.stakers.get_mut(staker_index as usize).unwrap();        
+        let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
         staker.gained_reward = staker.gained_reward - amount;        
 
         //update staking state
-        stake_state_account.total_rewarded = stake_state_account.total_rewarded + amount;
+        ctx.accounts.stake_state_account.total_rewarded = ctx.accounts.stake_state_account.total_rewarded + amount;
         let now_ts = Clock::get()?.unix_timestamp as u64;
-        stake_state_account.last_rewarded = now_ts;
-        stake_state_account.add_history(now_ts, 2, amount);
+        ctx.accounts.stake_state_account.last_rewarded = now_ts;
+        ctx.accounts.stake_state_account.add_history(now_ts, 2, amount);
         Ok(())
     }
 
 
     pub fn funding(ctx: Context<Funding>, amount: u64, timeframe_in_second: u64) -> ProgramResult {
-        let staking_data = &mut ctx.accounts.staking_data;
-        let total_staked = staking_data.total_staked;
-        let apy_max = staking_data.apy_max;
+        let total_staked = ctx.accounts.staking_data.total_staked;
+        let apy_max = ctx.accounts.staking_data.apy_max;
         let now_ts = Clock::get()?.unix_timestamp as u64;
         let mut pool_rest: u64 = 0;
         let mut total_reward: u64 = 0;
-        let timeframe_started = staking_data.timeframe_started;
-        let timeframe = staking_data.timeframe_in_second;
-        let pool_reward = staking_data.pool_reward;
+        let timeframe_started = ctx.accounts.staking_data.timeframe_started;
+        let timeframe = ctx.accounts.staking_data.timeframe_in_second;
+        let pool_reward = ctx.accounts.staking_data.pool_reward;
 
         //calc reward
         if timeframe > 0{
-            let mut frame_end_time = staking_data.timeframe_started + timeframe;
+            let mut frame_end_time = ctx.accounts.staking_data.timeframe_started + timeframe;
             if now_ts < frame_end_time {
                 frame_end_time = now_ts;
             }
             
-            for i in 0..staking_data.stakers.len(){
-                let staker = staking_data.stakers.get_mut(i).unwrap();
+            for i in 0..ctx.accounts.staking_data.stakers.len(){
+                let staker = ctx.accounts.staking_data.stakers.get_mut(i).unwrap();
                 if staker.staked_amount == 0 || staker.staked_time >= frame_end_time{
                     continue;
                 }
@@ -247,31 +258,28 @@ mod staking {
                 total_reward = total_reward + gained;
             }
 
-            staking_data.total_reward_paid = staking_data.total_reward_paid + total_reward;
-            staking_data.payout_reward = staking_data.payout_reward + total_reward;
+            ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + total_reward;
+            ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + total_reward;
 
-            pool_rest = staking_data.pool_reward - total_reward;
+            pool_rest = ctx.accounts.staking_data.pool_reward - total_reward;
         }
 
         let real_fund_amount = amount - pool_rest;
         if real_fund_amount > ctx.accounts.funder_account.amount {
             return Err(StakingErrors::InSufficientBalance.into());             
         }
-        
 
-        utils::transfer_spl(&ctx.accounts.funder_account.to_account_info(), 
-            &ctx.accounts.rewarder_account.to_account_info(), 
-            &ctx.accounts.authority,
-            &ctx.accounts.token_program, 
-            real_fund_amount, 
-            &staking_data.mint_address, staking_data.to_account_info().key, staking_data.bump_seed)?;
+        token::transfer(
+            ctx.accounts.into_transfer_to_rewarder_context(),
+            amount,
+        )?;
     
-        staking_data.payout_reward = staking_data.payout_reward + total_reward;
-        staking_data.pool_reward = pool_rest + real_fund_amount;
-        staking_data.total_funded = staking_data.total_funded + real_fund_amount;
-        staking_data.rewarder_balance = staking_data.rewarder_balance + real_fund_amount;
-        staking_data.timeframe_in_second = timeframe_in_second;
-        staking_data.timeframe_started = now_ts;
+        ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + total_reward;
+        ctx.accounts.staking_data.pool_reward = pool_rest + real_fund_amount;
+        ctx.accounts.staking_data.total_funded = ctx.accounts.staking_data.total_funded + real_fund_amount;
+        ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance + real_fund_amount;
+        ctx.accounts.staking_data.timeframe_in_second = timeframe_in_second;
+        ctx.accounts.staking_data.timeframe_started = now_ts;
         Ok(())
     }
 }

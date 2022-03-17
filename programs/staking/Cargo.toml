@@ -18,6 +18,7 @@ default = []
 crc = "^1.0.0"
 anchor-lang = "0.17.0"
 anchor-spl = "0.17.0"
+spl-token = {version = "3.1.1", features = ["no-entrypoint"]}
 
 [dev-dependencies]
 solana-sdk = "=1.7.11"
