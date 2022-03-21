@@ -8,14 +8,7 @@ const os = require('os');
 const fs = require('fs');
 const lib = require('../lib');
 
-function sleep(ms) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms)
-    })
-}
-  
-
-describe('Claiming tests', () => {
+describe('Unstaking tests', () => {
     const homedir = os.homedir();
     process.env.ANCHOR_WALLET = `${homedir}/.config/solana/id.json`;
 
@@ -40,6 +33,7 @@ describe('Claiming tests', () => {
     let funderAuthority;
     let funderAccount;
     let minTimeframeInSecond = 30;
+
 
     beforeEach(async () => {
         // create wallet A
@@ -77,30 +71,8 @@ describe('Claiming tests', () => {
         assert(stakerState.onwerAddress.toBase58() === stakerInitializer.publicKey.toBase58());
     });
 
-    it.skip('Claiming for not gained', async () => {
-        //first staking
-        const amount = 1000;
-        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
-        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
-        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);        
-        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
-
-        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
-        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
-        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
-        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
-
-        const stakingData = await utils.getStakingData(program, stakingDataAccount);
-        assert(stakingData.totalStaked.toNumber() === amount);
-        
-        //try claiming
-        res = await lib.claimReward(program, stakingDataAccount, stakerAccount, 100, stakerInitializer);
-        assert(res === 'insufficient gained reward')
-        
-    });
-
-    it.skip('Claiming full amount', async () => {
-        //first staking
+    it('UnStaking full amount', async () => {
+        //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
         const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
@@ -114,39 +86,20 @@ describe('Claiming tests', () => {
 
         let stakingData = await utils.getStakingData(program, stakingDataAccount);
         assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
 
-        //funding
-        const fundAmount = 1000;
-        const timeframeInSecond = 30;
-        await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
+        //unstaking
+        const unstakingAmount = 1000;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
         stakingData = await utils.getStakingData(program, stakingDataAccount);
-
-        //sleep 32 second call funding again
-        console.log("waiting 32 seconds");
-        await sleep(32000);
-
-        await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
-        stakingData = await utils.getStakingData(program, stakingDataAccount);
-        const gainedReward = stakingData.stakers[0].gainedReward.toNumber();
-        assert(stakingData.payoutReward.toNumber() === gainedReward);
-
-        console.log("claiming gained reward=", gainedReward);
-        const res = await lib.claimReward(program, stakingDataAccount, stakerAccount, gainedReward, stakerInitializer);
-  
-        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
-        assert(stakerAccountBalance2 === stakerAccountBalance1 + gainedReward);
-        stakingData = await utils.getStakingData(program, stakingDataAccount);
-
-        console.log(stakingData);
-
-        assert(stakingData.totalRewardPaid.toNumber() === gainedReward);
-        assert(stakingData.payoutReward.toNumber() === 0);
-        assert(stakingData.stakers[0].gainedReward.toNumber() === 0);
-
+        assert(stakingData.totalStaked.toNumber() === amount - unstakingAmount);
+        assert(stakingData.stakers.length === 0);
     });
 
-    it('Claiming some amount', async () => {
-        //first staking
+    it('UnStaking some amount', async () => {
+        //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
         const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
@@ -160,34 +113,42 @@ describe('Claiming tests', () => {
 
         let stakingData = await utils.getStakingData(program, stakingDataAccount);
         assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
 
-        //funding
-        const fundAmount = 1000;
-        const timeframeInSecond = 30;
-        await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
+        //unstaking
+        const unstakingAmount = 500;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
         stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount - unstakingAmount);
+        assert(stakingData.stakers.length === 1);
+    });
 
-        //sleep 32 second call funding again
-        console.log("waiting 32 seconds");
-        await sleep(32000);
+    it('UnStaking big amount than staked', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);        
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
 
-        await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //unstaking
+        const unstakingAmount = amount + 1;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === 'insufficient staked balance')
+
         stakingData = await utils.getStakingData(program, stakingDataAccount);
-        const gainedReward = stakingData.stakers[0].gainedReward.toNumber();
-        assert(stakingData.payoutReward.toNumber() === gainedReward);
-
-        console.log("claiming gained reward=", 1);
-        const res = await lib.claimReward(program, stakingDataAccount, stakerAccount, 1, stakerInitializer);
-  
-        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
-        assert(stakerAccountBalance2 === stakerAccountBalance1 + 1);
-        stakingData = await utils.getStakingData(program, stakingDataAccount);
-
-        assert(stakingData.totalRewardPaid.toNumber() === 1);
-        assert(stakingData.payoutReward.toNumber() === gainedReward - 1);
-        assert(stakingData.stakers[0].gainedReward.toNumber() === gainedReward - 1);
-
-        const reward = utils.calculateReward(800, 1000, 1000, 0, 30, 1000, 0);
-        console.log("reward=", reward);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
     });
 })

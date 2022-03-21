@@ -283,43 +283,40 @@ async function funding(
     return result;
 }
 
-function calculateReward(apyMax, poolStaked, poolReward, timeFrameStart, timeFrameEnd, staked, stakedTime)
-{
-    if (staked === 0 || stakedTime >= timeFrameEnd){
-        return 0;
-    }
-
-    let seconds = timeFrameEnd - timeFrameStart;
-    if (stakedTime > timeFrameStart) {
-        seconds = timeFrameEnd - stakedTime;
-    }
-    let days = seconds/ (3600 * 24);
-    let frameDays = seconds / (3600 * 24);
-    let gainedTotal = (poolReward * days * staked)/ (frameDays * poolStaked);
-    let gainedPerDay = gainedTotal / days;
-    let stakedPerDay = staked / days;
-    let gainedPercentPerDay = gainedPerDay * 100.00 / stakedPerDay;
-    let apdMax = apyMax / 365.50;
-
-    if (gainedPercentPerDay > apdMax){
-        gainedPercentPerDay = apdMax;
-    }
-
-    let gained = gainedPercentPerDay * stakedPerDay * days / 100.00;
-    return gained;
-}
-
-function getGainedReward(stakingData, stakingState)
-{
-    for(let i=0; i<stakingData.stakers.length; i++)
+async function setMaxApy(
+    program,
+    stakingDataAccount,
+    apyMax,
+    signer,
+) {
+    const stakingData = await utils.getStakingData(program, stakingDataAccount);
+    if(stakingData == null)
     {
-        const staker = stakingData.stakers[i];
-        if(staker.stakerCrc !== stakingState.myCrc)
-            continue;
-        return staker.gainedReward.toNumber();
+        return "stakingData didn't init";
     }
-    return 0;
+
+    let result;
+    try{
+        await program.rpc.setMaxApy(
+            apyMax,
+            {
+                accounts: {
+                    stakingData: stakingDataAccount,
+                    authority: signer.publicKey,
+                },
+                signers: [signer],
+            },
+        );    
+        result = apyMax;
+    }catch(e){
+        console.log(e);
+        if (e.msg === undefined) {
+            result = parseErrorNumber(program._idl.errors, e.logs);
+        } else result = e.msg;        
+    }
+    return result;
 }
+
 
 module.exports = {
     initialize,   
@@ -328,7 +325,5 @@ module.exports = {
     unstaking,
     claimReward,
     funding,
-    calculateReward,
-    getGainedReward
 }
 

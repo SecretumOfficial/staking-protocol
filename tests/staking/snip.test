@@ -1,0 +1,20 @@
+local testnet
+solana config set --url http://localhost:8899
+
+devnet
+solana config set --url https://api.devnet.solana.com
+
+testnet
+solana config set --url https://api.testnet.solana.com
+
+
+solana-keygen pubkey
+npm install -g mocha
+
+mocha --timeout 10000 ./tests/staking/staking.test.js
+mocha --timeout 10000 ./tests/staking/unstaking.test.js
+mocha --timeout 10000 ./tests/staking/funding.test.js
+mocha --timeout 10000 ./tests/staking/claiming.test.js
+
+
+
