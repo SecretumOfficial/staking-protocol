@@ -300,4 +300,9 @@ mod staking {
         ctx.accounts.staking_data.timeframe_started = now_ts;
         Ok(())
     }
+
+    pub fn set_max_apy(ctx: Context<SetMaxApy>, apy_max: u32) -> ProgramResult {
+        ctx.accounts.staking_data.apy_max = apy_max;
+        Ok(())
+    }
 }

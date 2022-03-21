@@ -353,3 +353,14 @@ impl<'info> Claiming<'info> {
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
 }
+
+#[derive(Accounts)]
+pub struct SetMaxApy<'info> {
+    #[account(mut)]
+    pub staking_data: ProgramAccount<'info, StakingData>,
+
+    #[account(mut, signer,
+        constraint = staking_data.initializer == *authority.key,
+    )]
+    pub authority: AccountInfo<'info>,
+}
