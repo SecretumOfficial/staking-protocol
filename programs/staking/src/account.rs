@@ -34,6 +34,7 @@ pub struct StakingData {
     pub total_staked: u64,
 
     //funding 
+    pub min_timeframe_in_second: u64,
     pub timeframe_in_second: u64,
     pub timeframe_started: u64,
     pub pool_reward: u64,

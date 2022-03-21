@@ -35,4 +35,9 @@ pub enum StakingErrors {
     #[msg("exist un-claimed reward")]
     ExistUnClaimedReward,
 
+    #[msg("amount must big than zero")]
+    AmountMustBigThanZero,
+
+    #[msg("timeframe must big than min")]
+    TimeframeMustBigThanMin,
 }

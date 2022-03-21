@@ -22,6 +22,7 @@ mod staking {
     pub fn initialize(
         ctx: Context<Initialize>,
         apy_max: u32,
+        min_timeframe_in_second: u64,
     ) -> ProgramResult {
         let staking_data = &mut ctx.accounts.staking_data;
 
@@ -35,6 +36,7 @@ mod staking {
         staking_data.total_funded = 0;
         staking_data.total_reward_paid = 0;
 
+        staking_data.min_timeframe_in_second = min_timeframe_in_second;
         staking_data.timeframe_in_second = 0;
         staking_data.timeframe_started = 0;
         staking_data.pool_reward = 0;
@@ -81,6 +83,10 @@ mod staking {
 
     pub fn staking(ctx: Context<Staking>,amount: u64) -> ProgramResult {
 
+        if amount == 0{
+            return Err(StakingErrors::AmountMustBigThanZero.into());
+        }
+
         if amount > ctx.accounts.staker_account.amount {
             return Err(StakingErrors::InSufficientBalance.into());             
         }
@@ -123,6 +129,10 @@ mod staking {
 
 
     pub fn unstaking(ctx: Context<Unstaking>, amount: u64) -> ProgramResult {
+
+        if amount == 0{
+            return Err(StakingErrors::AmountMustBigThanZero.into());
+        }
 
         let staker_index = ctx.accounts.staking_data.index_of_staker(ctx.accounts.stake_state_account.my_crc);
         if staker_index < 0 {
@@ -172,6 +182,9 @@ mod staking {
 
     pub fn claim_reward(ctx: Context<Claiming>, amount: u64) -> ProgramResult {
 
+        if amount == 0{
+            return Err(StakingErrors::AmountMustBigThanZero.into());
+        }
 
         let staker_index = ctx.accounts.staking_data.index_of_staker(ctx.accounts.stake_state_account.my_crc);
 
@@ -198,12 +211,13 @@ mod staking {
         )?;
 
         //update staking data
-        //let staking_data = &mut ctx.accounts.staking_data;        
+        //let staking_data = &mut ctx.accounts.staking_data;
+        ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward - amount;
         ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + amount;
 
         //update staker state        
         let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
-        staker.gained_reward = staker.gained_reward - amount;        
+        staker.gained_reward = staker.gained_reward - amount;                
 
         //update staking state
         ctx.accounts.stake_state_account.total_rewarded = ctx.accounts.stake_state_account.total_rewarded + amount;
@@ -218,12 +232,20 @@ mod staking {
         let total_staked = ctx.accounts.staking_data.total_staked;
         let apy_max = ctx.accounts.staking_data.apy_max;
         let now_ts = Clock::get()?.unix_timestamp as u64;
-        let mut pool_rest: u64 = 0;
         let mut total_reward: u64 = 0;
         let timeframe_started = ctx.accounts.staking_data.timeframe_started;
         let timeframe = ctx.accounts.staking_data.timeframe_in_second;
         let pool_reward = ctx.accounts.staking_data.pool_reward;
 
+        if amount == 0{
+            return Err(StakingErrors::AmountMustBigThanZero.into());
+        }
+
+        if timeframe_in_second < ctx.accounts.staking_data.min_timeframe_in_second{
+            return Err(StakingErrors::TimeframeMustBigThanMin.into());
+        }
+
+        let mut pool_rest = ctx.accounts.staking_data.pool_reward;
         //calc reward
         if timeframe > 0{
             let mut frame_end_time = ctx.accounts.staking_data.timeframe_started + timeframe;
@@ -242,7 +264,7 @@ mod staking {
                     seconds = frame_end_time - staker.staked_time;
                 }
                 let days: f64 = (seconds as f64)/ ((3600 * 24) as f64);
-                let frame_days: f64 = (seconds as f64) / ((3600 * 24) as f64);
+                let frame_days: f64 = (timeframe as f64) / ((3600 * 24) as f64);
                 let gained_total: f64 = (pool_reward as f64) * days * (staker.staked_amount as f64)/ (frame_days * total_staked as f64);
                 let gained_per_day: f64 = gained_total / days;
                 let staked_per_day: f64 = (staker.staked_amount as f64) / days;
@@ -258,10 +280,6 @@ mod staking {
                 staker.gained_reward = staker.gained_reward + gained;
                 total_reward = total_reward + gained;
             }
-
-            ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + total_reward;
-            ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + total_reward;
-
             pool_rest = ctx.accounts.staking_data.pool_reward - total_reward;
         }
 
@@ -274,7 +292,6 @@ mod staking {
             ctx.accounts.into_transfer_to_rewarder_context(),
             amount,
         )?;
-    
         ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + total_reward;
         ctx.accounts.staking_data.pool_reward = pool_rest + real_fund_amount;
         ctx.accounts.staking_data.total_funded = ctx.accounts.staking_data.total_funded + real_fund_amount;
