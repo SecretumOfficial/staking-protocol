@@ -214,6 +214,7 @@ mod staking {
         //let staking_data = &mut ctx.accounts.staking_data;
         ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward - amount;
         ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + amount;
+        ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance - amount;
 
         //update staker state        
         let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
