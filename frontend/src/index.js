@@ -9,6 +9,7 @@ import {
 } from '../config';
 const lib = require("./lib");
 const utils = require("./utils");
+const utils0 = require("../../lib/utils");
 
 window.Buffer = window.Buffer || require('buffer').Buffer;
 
@@ -154,16 +155,22 @@ const transfer = async () => {
 
 
 const initStaking = async () => {
-  const mintPublicKey = new web3.PublicKey(document.getElementById('mint_address').value);
+  const mintPublicKey = new web3.PublicKey(document.getElementById('mint_address').value);  
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
-  const anchor_provider = await getAnchorProvider();
-  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
+  const anchorProvider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
+  const apyMax = document.getElementById("apy_max").value;
+  const funderAuthority = new web3.PublicKey(document.getElementById('funder_authority').value);  
 
-  const reward_percent = document.getElementById("reward_percent").value;
-  const reward_period = document.getElementById("reward_period").value;
-  const res = await lib.initialize(program, connection,
-    reward_percent, reward_period, mintPublicKey, provider);
+  const res = await lib.initialize(program, 
+    connection, 
+    funderAuthority, 
+    mintPublicKey,
+    apyMax, 
+    60, //24 * 3600
+    provider
+  );
 
   if(res[0] == null)
   {
@@ -174,13 +181,13 @@ const initStaking = async () => {
 }
 
 const initStakingState = async () => {
-  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
-  const anchor_provider = await getAnchorProvider();
-  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
+  const anchorProvider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
 
-  const res = await lib.initializeStakeState(program, connection, pda, provider);
+  const res = await lib.initializeStakeState(program, connection, stakingDataAccount, provider);
 
   if(res[0] == null)
   {
@@ -191,15 +198,14 @@ const initStakingState = async () => {
 }
 
 const Staking = async () => {
-  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
-  const state = new web3.PublicKey(document.getElementById('state_address').value);  
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
-  const anchor_provider = await getAnchorProvider();
-  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
-  const stake_amount = Number(document.getElementById('stake_amount').value);
+  const anchorProvider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
+  const stakeAmount = Number(document.getElementById('stake_amount').value);
 
-  const res = await lib.staking(program, connection, pda, state, stake_amount, provider);
+  const res = await lib.staking(program, connection, stakingDataAccount, stakeAmount, provider);
   if(res[0] == null)
   {
     alert(res[1]);
@@ -210,53 +216,123 @@ const Staking = async () => {
 }
 
 const Unstaking = async () => {
-  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
-  const state = new web3.PublicKey(document.getElementById('state_address').value);  
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
   const connection = new web3.Connection(URL, 'confirmed');
   const provider = await getProvider();
-  const anchor_provider = await getAnchorProvider();
-  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
-  const stake_amount = Number(document.getElementById('stake_amount').value);
+  const anchorProvider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
+  const stakeAmount = Number(document.getElementById('stake_amount').value);
 
-  const res = await lib.unstaking(program, connection, pda, state, stake_amount, provider);
+  const res = await lib.unstaking(program, connection, stakingDataAccount, stakeAmount, provider);
   if(res[0] == null)
   {
     alert(res[1]);
   }else{
-    await stat_refresh();
+    await statRefresh();
     await myStat();
   }
 }
 
 
-const stat_refresh = async () => {
+const ClaimReward = async () => {
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
+  const connection = new web3.Connection(URL, 'confirmed');
+  const provider = await getProvider();
+  const anchorProvider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
+  const claimAmount = Number(document.getElementById('gained_reward_amount').value);
+
+  const res = await lib.claimReward(program, connection, stakingDataAccount, claimAmount, provider);
+  if(res[0] == null)
+  {
+    alert(res[1]);
+  }else{
+    await statRefresh();
+    await myStat();
+  }
+}
+
+const Funding = async () => {
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
+  const connection = new web3.Connection(URL, 'confirmed');
+  const provider = await getProvider();
   const anchor_provider = await getAnchorProvider();
   const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
-  const pda = new anchor.web3.PublicKey(document.getElementById("staking_address").value);
-  let stakingData = await program.account.stakingData.fetch(pda);
+  const poolReward = Number(document.getElementById('pool_reward_amount').value);
+  const timeFrame = Number(document.getElementById('timeframe_in_secs').value);
+
+  const res = await lib.funding(program, connection, 
+    stakingDataAccount, poolReward, timeFrame, provider);
+  if(res[0] == null)
+  {
+    alert(res[1]);
+  }else{
+    await statRefresh();
+  }
+}
+
+
+const SetAPYMax = async () => {
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
+  const connection = new web3.Connection(URL, 'confirmed');
+  const provider = await getProvider();
+  const anchor_provider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
+  const apyMax = Number(document.getElementById('apy_max').value);
+
+  const res = await lib.setMaxApy(program, connection, 
+    stakingDataAccount, apyMax, provider);
+  if(res[0] == null)
+  {
+    alert(res[1]);
+  }else{
+    await statRefresh();
+    await myStat();
+  }
+}
+
+
+
+
+const statRefresh = async () => {
+  const anchor_provider = await getAnchorProvider();
+  const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
+  const stakingDataAccount = new anchor.web3.PublicKey(document.getElementById("staking_address").value);
+  let stakingData = await program.account.stakingData.fetch(stakingDataAccount);
 
   document.getElementById('total_staked').innerHTML = stakingData.totalStaked.toNumber();
-  document.getElementById('reward_percent1').innerHTML = stakingData.rewardPercent;
-  document.getElementById('reward_period1').innerHTML = stakingData.rewardPeriodInSec;  
+  document.getElementById('apy_max1').innerHTML = stakingData.apyMax;
+  document.getElementById('funder_authority1').innerHTML = stakingData.funderAuthority.toString();
 
   document.getElementById('rewarder_balance').innerHTML = stakingData.rewarderBalance.toNumber();
   document.getElementById('total_funded').innerHTML = stakingData.totalFunded;
   document.getElementById('total_reward_paid').innerHTML = stakingData.totalRewardPaid;
+
+  document.getElementById('total_staked').innerHTML = stakingData.totalStaked.toNumber();
+  document.getElementById('pool_reward').innerHTML = stakingData.poolReward;
+  document.getElementById('timeframe_started').innerHTML = stakingData.timeframeStarted;
+  document.getElementById('timeframe_in_seconds').innerHTML = stakingData.timeframeInSecond;
+  document.getElementById('payout_reward').innerHTML = stakingData.payoutReward;
+
+
 }
 
 
 const myStat = async () => {
-  const pda = new web3.PublicKey(document.getElementById('staking_address').value);
+  const stakingDataAccount = new web3.PublicKey(document.getElementById('staking_address').value);
   const state = new web3.PublicKey(document.getElementById('state_address').value);  
   const connection = new web3.Connection(URL, 'confirmed');
   const anchor_provider = await getAnchorProvider();
   const program = new anchor.Program(tokenlockIdl, programId, anchor_provider);
   const stateData = await program.account.stakingState.fetch(state);
+  const stakingData = await program.account.stakingData.fetch(stakingDataAccount);  
+  const gainedReward = utils0.getGainedReward(stakingData, stateData);
 
   document.getElementById('my_staked').innerHTML = stateData.totalStaked.toNumber();
   document.getElementById('my_rewarded').innerHTML = stateData.totalRewarded.toNumber();
   document.getElementById('last_staked').innerHTML = stateData.lastStaked.toNumber();
   document.getElementById('last_rewarded').innerHTML = stateData.lastRewarded.toNumber();
+  document.getElementById('gained_reward').innerHTML = gainedReward;
 }
 
 (() => {
@@ -295,9 +371,20 @@ const myStat = async () => {
   unstaking_btn.addEventListener('click', Unstaking); 
 
   const pda_state_btn = document.getElementById('pda_state_btn');  
-  pda_state_btn.addEventListener('click', stat_refresh); 
+  pda_state_btn.addEventListener('click', statRefresh); 
 
   const my_state_btn = document.getElementById('my_state_btn');  
   my_state_btn.addEventListener('click', myStat); 
+
+  const fund_btn = document.getElementById('fund_btn');  
+  fund_btn.addEventListener('click', Funding);  
+
+  const set_max_apy_btn = document.getElementById('set_max_apy_btn');  
+  set_max_apy_btn.addEventListener('click', SetAPYMax);    
+
+  const claim_btn = document.getElementById('claim_btn');  
+  claim_btn.addEventListener('click', ClaimReward);    
+
+  
 
 })();

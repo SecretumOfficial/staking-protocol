@@ -325,5 +325,6 @@ module.exports = {
     unstaking,
     claimReward,
     funding,
+    setMaxApy
 }
 

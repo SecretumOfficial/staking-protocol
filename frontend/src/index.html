@@ -95,11 +95,11 @@
     <div class="flex">
       <div>
         <p>Reward percent</p>
-        <input id="reward_percent" value="10"/>
+        <input id="apy_max" value="800"/>
       </div>
       <div>
-        <p>Reward period(seconds)</p>
-        <input id="reward_period" value = "86400"/>
+        <p>Funder Authority</p>
+        <input id="funder_authority" class="address"/>
       </div>
       <div>
         <p style="opacity:0">Click</p>
@@ -145,15 +145,61 @@
   </section>    
 
   <section class="card">
+    <h2>Funding</h2>
+    <div class="flex">
+      <div>
+        <p>Pool Reward</p>
+        <input id="pool_reward_amount" value="1000"/>
+      </div>
+      <div>
+        <p>Time Frame(secs)</p>
+        <input id="timeframe_in_secs" value="1000"/>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="fund_btn">Fund</button>
+      </div>
+    </div>
+  </section>    
+
+  <section class="card">
+    <h2>Claiming Reward</h2>
+    <div class="flex">
+      <div>
+        <p>Gained Reward</p>
+        <input id="gained_reward_amount" value="0"/>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="claim_btn">Claim</button>
+      </div>
+    </div>
+  </section> 
+
+  <section class="card">
+    <h2>Set Max APY</h2>
+    <div class="flex">
+      <div>
+        <p>Max APY</p>
+        <input id="apy_max" value="800"/>
+      </div>
+      <div>
+        <p style="opacity:0">Click</p>
+        <button id="set_max_apy_btn">Set</button>
+      </div>
+    </div>
+  </section>    
+
+  <section class="card">
     <h2>PDA state</h2>
     <button id="pda_state_btn">Refresh</button>
     <div class="flex" style="margin-bottom: 10px">
       <p class="wallet_label">total staked</p>
       <p id="total_staked"></p>  
-      <p class="wallet_label">Reward percent</p>
-      <p id="reward_percent1"></p>  
-      <p class="wallet_label">Reward period</p>
-      <p id="reward_period1"></p>  
+      <p class="wallet_label">Max APY</p>
+      <p id="apy_max1"></p>  
+      <p class="wallet_label">Funder Author</p>
+      <p id="funder_authority1"></p>  
     </div>
     <div class="flex" style="margin-bottom: 10px">
       <p class="wallet_label">Rewarder balance</p>
@@ -162,6 +208,20 @@
       <p id="total_funded"></p>  
       <p class="wallet_label">Total reward payout</p>
       <p id="total_reward_paid"></p>  
+    </div>
+    <div class="flex" style="margin-bottom: 10px">
+      <p class="wallet_label">Total Staked</p>
+      <p id="total_staked"></p>  
+      <p class="wallet_label">Payout reward</p>
+      <p id="payout_reward"></p>        
+    </div>
+    <div class="flex" style="margin-bottom: 10px">
+      <p class="wallet_label">Pool reward</p>
+      <p id="pool_reward"></p>
+      <p class="wallet_label">Time frame started</p>
+      <p id="timeframe_started"></p>  
+      <p class="wallet_label">Time frame in seconds</p>
+      <p id="timeframe_in_seconds"></p>
     </div>
   </section>
 
@@ -178,6 +238,8 @@
       <p id="last_staked"></p>
       <p class="wallet_label">Last Rewarded</p>
       <p id="last_rewarded"></p>
+      <p class="wallet_label">Gained Reward</p>
+      <p id="gained_reward"></p>
     </div>
   </section>
 
