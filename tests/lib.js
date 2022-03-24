@@ -34,6 +34,7 @@ async function initialize(
     mintAddress,
     apyMax,
     minTimeframeInSecond,
+    minStakePeriod,
     signer,
 ) {
     const stakingDataAccount = await utils.getStakingDataAccount(signer.publicKey, mintAddress, program.programId);
@@ -44,6 +45,7 @@ async function initialize(
         await program.rpc.initialize(
             apyMax,
             new anchor.BN(minTimeframeInSecond),
+            new anchor.BN(minStakePeriod),
             {
                 accounts: {
                     stakingData: stakingDataAccount,

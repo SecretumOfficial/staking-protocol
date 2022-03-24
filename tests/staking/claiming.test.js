@@ -39,7 +39,9 @@ describe('Claiming tests', () => {
 
     let funderAuthority;
     let funderAccount;
-    let minTimeframeInSecond = 30;
+    const minTimeframeInSecond = 30;
+    const minStakePeriod = 30;
+    const apyMax = 800;
 
     beforeEach(async () => {
         // create wallet A
@@ -67,7 +69,7 @@ describe('Claiming tests', () => {
         await mint.mintTo(stakerAccount, mintAuthority.publicKey, [mintAuthority], 100_000_000_000);
 
         //init staking
-        stakingDataAccount = await lib.initialize(program, funderAuthority.publicKey, mint.publicKey, 800, minTimeframeInSecond, stakingInitializer);
+        stakingDataAccount = await lib.initialize(program, funderAuthority.publicKey, mint.publicKey, apyMax, minTimeframeInSecond, minStakePeriod, stakingInitializer);
 
         //init staker state
         const stakerStateAccount = await lib.initializeStakeState(program, stakingDataAccount, stakerInitializer);
@@ -77,7 +79,7 @@ describe('Claiming tests', () => {
         assert(stakerState.onwerAddress.toBase58() === stakerInitializer.publicKey.toBase58());
     });
 
-    it.skip('Claiming for not gained', async () => {
+    it('Claiming for not gained', async () => {
         //first staking
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -99,7 +101,7 @@ describe('Claiming tests', () => {
         
     });
 
-    it.skip('Claiming full amount', async () => {
+    it('Claiming full amount', async () => {
         //first staking
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);

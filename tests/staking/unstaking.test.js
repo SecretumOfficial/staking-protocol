@@ -32,7 +32,9 @@ describe('Unstaking tests', () => {
 
     let funderAuthority;
     let funderAccount;
-    let minTimeframeInSecond = 30;
+    const minTimeframeInSecond = 30;
+    const minStakePeriod = 30;
+    const apyMax = 800;
 
 
     beforeEach(async () => {
@@ -61,7 +63,7 @@ describe('Unstaking tests', () => {
         await mint.mintTo(stakerAccount, mintAuthority.publicKey, [mintAuthority], 100_000_000_000);
 
         //init staking
-        stakingDataAccount = await lib.initialize(program, funderAuthority.publicKey, mint.publicKey, 800, minTimeframeInSecond, stakingInitializer);
+        stakingDataAccount = await lib.initialize(program, funderAuthority.publicKey, mint.publicKey, apyMax, minTimeframeInSecond, minStakePeriod, stakingInitializer);
 
         //init staker state
         const stakerStateAccount = await lib.initializeStakeState(program, stakingDataAccount, stakerInitializer);
