@@ -40,6 +40,7 @@ pub struct StakingData {
     pub pool_reward: u64,
     pub payout_reward: u64,
     pub apy_max: u32,
+    pub min_stake_period: u64,
 
     //stakers
     pub stakers: Vec<StakerState>
@@ -355,7 +356,7 @@ impl<'info> Claiming<'info> {
 }
 
 #[derive(Accounts)]
-pub struct SetMaxApy<'info> {
+pub struct ChnageSetting<'info> {
     #[account(mut)]
     pub staking_data: ProgramAccount<'info, StakingData>,
 

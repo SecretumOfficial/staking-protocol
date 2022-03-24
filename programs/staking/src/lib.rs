@@ -23,7 +23,19 @@ mod staking {
         ctx: Context<Initialize>,
         apy_max: u32,
         min_timeframe_in_second: u64,
+        min_stake_period: u64,
     ) -> ProgramResult {
+
+        if apy_max < 1{
+            return Err(StakingErrors::ApyMaxMustBigThanZero.into());
+        }
+        if min_timeframe_in_second < 1{
+            return Err(StakingErrors::MinTimeFrameMustBigThanZero.into());
+        }
+        if min_stake_period < 1{
+            return Err(StakingErrors::MinStakePeriodMustBigThanZero.into());
+        }
+
         let staking_data = &mut ctx.accounts.staking_data;
 
         staking_data.initializer = *ctx.accounts.authority.key;
@@ -42,6 +54,8 @@ mod staking {
         staking_data.pool_reward = 0;
         staking_data.payout_reward = 0;
         staking_data.apy_max = apy_max;    
+        staking_data.min_stake_period = min_stake_period;
+
         staking_data.stakers = Vec::new();
 
         let (authority, authority_bump) =
@@ -232,6 +246,7 @@ mod staking {
     pub fn funding(ctx: Context<Funding>, amount: u64, timeframe_in_second: u64) -> ProgramResult {
         let total_staked = ctx.accounts.staking_data.total_staked;
         let apy_max = ctx.accounts.staking_data.apy_max;
+        let min_stake_period = ctx.accounts.staking_data.min_stake_period;
         let now_ts = Clock::get()?.unix_timestamp as u64;
         let mut total_reward: u64 = 0;
         let timeframe_started = ctx.accounts.staking_data.timeframe_started;
@@ -245,6 +260,11 @@ mod staking {
         if timeframe_in_second < ctx.accounts.staking_data.min_timeframe_in_second{
             return Err(StakingErrors::TimeframeMustBigThanMin.into());
         }
+
+        if timeframe_in_second < ctx.accounts.staking_data.min_stake_period{
+            return Err(StakingErrors::TimeframeMustBigThanMinStakePeriod.into());
+        }
+
 
         let mut pool_rest = ctx.accounts.staking_data.pool_reward;
         //calc reward
@@ -264,6 +284,10 @@ mod staking {
                 if staker.staked_time > timeframe_started {
                     seconds = frame_end_time - staker.staked_time;
                 }
+                if seconds < min_stake_period {
+                    continue;
+                }
+
                 let days: f64 = (seconds as f64)/ ((3600 * 24) as f64);
                 let frame_days: f64 = (timeframe as f64) / ((3600 * 24) as f64);
                 let gained_total: f64 = (pool_reward as f64) * days * (staker.staked_amount as f64)/ (frame_days * total_staked as f64);
@@ -280,13 +304,14 @@ mod staking {
 
                 staker.gained_reward = staker.gained_reward + gained;
                 total_reward = total_reward + gained;
+                staker.staked_time = now_ts;
             }
             pool_rest = ctx.accounts.staking_data.pool_reward - total_reward;
         }
 
         let real_fund_amount = amount - pool_rest;
         if real_fund_amount > ctx.accounts.funder_account.amount {
-            return Err(StakingErrors::InSufficientBalance.into());             
+            return Err(StakingErrors::InSufficientBalance.into());
         }
 
         token::transfer(
@@ -302,8 +327,16 @@ mod staking {
         Ok(())
     }
 
-    pub fn set_max_apy(ctx: Context<SetMaxApy>, apy_max: u32) -> ProgramResult {
+    pub fn change_setting(ctx: Context<ChnageSetting>, apy_max: u32, min_stake_period: u64) -> ProgramResult {
+
+        if min_stake_period > ctx.accounts.staking_data.timeframe_in_second {
+            return Err(StakingErrors::MinStakePeriodMustBeLessThanCurrentTimeFrame.into());
+        }
+        if apy_max < 1{
+            return Err(StakingErrors::ApyMaxMustBigThanZero.into());
+        }
         ctx.accounts.staking_data.apy_max = apy_max;
+        ctx.accounts.staking_data.min_stake_period = min_stake_period;
         Ok(())
     }
 }
