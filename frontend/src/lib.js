@@ -26,6 +26,7 @@ async function initialize(
     mintAddress,
     apyMax,
     minTimeframeInSecond,
+    minStakePeriod,
     signer,
 ) {
     const stakingDataAccount = await utils.getStakingDataAccount(signer.publicKey, mintAddress, program.programId);
@@ -34,6 +35,7 @@ async function initialize(
     const inst = program.instruction.initialize(
         apyMax,
         new anchor.BN(minTimeframeInSecond),
+        new anchor.BN(minStakePeriod),        
         {
             accounts: {
                 stakingData: stakingDataAccount,
@@ -187,7 +189,7 @@ async function claimReward(
     }
     const claimer = await utils.getAssociatedTokenAddress(stakingData.mintAddress, signer.publicKey, false);
     const stakingAuthority = await utils.getStakingAuthAccount(stakingDataAccount, program.programId);
-    
+
     const inst = program.instruction.claimReward(
         new anchor.BN(amount),
         {

@@ -161,6 +161,9 @@ const initStaking = async () => {
   const anchorProvider = await getAnchorProvider();
   const program = new anchor.Program(tokenlockIdl, programId, anchorProvider);
   const apyMax = document.getElementById("apy_max").value;
+  const minTimeFrame = document.getElementById("min_time_frame").value;
+  const minStakePeriod = document.getElementById("min_stake_period").value;    
+  
   const funderAuthority = new web3.PublicKey(document.getElementById('funder_authority').value);  
 
   const res = await lib.initialize(program, 
@@ -168,7 +171,8 @@ const initStaking = async () => {
     funderAuthority, 
     mintPublicKey,
     apyMax, 
-    60, //24 * 3600
+    minTimeFrame, //24 * 3600
+    minStakePeriod,
     provider
   );
 
