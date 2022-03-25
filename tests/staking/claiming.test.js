@@ -189,7 +189,7 @@ describe('Claiming tests', () => {
         assert(stakingData.payoutReward.toNumber() === gainedReward - 1);
         assert(stakingData.stakers[0].gainedReward.toNumber() === gainedReward - 1);
 
-        const reward = utils.calculateReward(800, 1000, 1000, 0, 30, 1000, 0);
+        const reward = utils.calculateReward(800, 1000, 1000, 0, 30, 1000, 0, stakingData.minStakePeriod);
         console.log("reward=", reward);
     });
 })
