@@ -9,9 +9,11 @@ use crc::crc32;
 pub mod account;
 pub mod error;
 pub mod event;
+pub mod calculate;
 
 use crate::account::*;
 use crate::error::*;
+use crate::calculate::*;
 
 declare_id!("HohQ7VZFqDDn785ukULBKpNRKHsZXQPtCeUJ9PzYxgZ");
 
@@ -269,38 +271,20 @@ mod staking {
         let mut pool_rest = ctx.accounts.staking_data.pool_reward;
         //calc reward
         if timeframe > 0{
-            let mut frame_end_time = ctx.accounts.staking_data.timeframe_started + timeframe;
-            if now_ts < frame_end_time {
-                frame_end_time = now_ts;
+            let mut time_frame_end = timeframe_started + timeframe;
+            if now_ts < time_frame_end {
+                time_frame_end = now_ts;
             }
             
             for i in 0..ctx.accounts.staking_data.stakers.len(){
                 let staker = ctx.accounts.staking_data.stakers.get_mut(i).unwrap();
-                if staker.staked_amount == 0 || staker.staked_time >= frame_end_time{
+                let gained = calculate_reward(apy_max as u64, total_staked, pool_reward, 
+                    timeframe_started, time_frame_end, staker.staked_amount, 
+                    staker.staked_time, min_stake_period);
+
+                if gained == 0{
                     continue;
                 }
-
-                let mut seconds = timeframe;
-                if staker.staked_time > timeframe_started {
-                    seconds = frame_end_time - staker.staked_time;
-                }
-                if seconds < min_stake_period {
-                    continue;
-                }
-
-                let days: f64 = (seconds as f64)/ ((3600 * 24) as f64);
-                let frame_days: f64 = (timeframe as f64) / ((3600 * 24) as f64);
-                let gained_total: f64 = (pool_reward as f64) * days * (staker.staked_amount as f64)/ (frame_days * total_staked as f64);
-                let gained_per_day: f64 = gained_total / days;
-                let staked_per_day: f64 = (staker.staked_amount as f64) / days;
-                let mut gained_percent_per_day: f64 = gained_per_day * 100.00 / staked_per_day;
-                let apd_max = (apy_max as f64) / 365.50;
-
-                if gained_percent_per_day > apd_max{
-                    gained_percent_per_day = apd_max;
-                }
-
-                let gained = (gained_percent_per_day * staked_per_day * days / 100.00) as u64;
 
                 staker.gained_reward = staker.gained_reward + gained;
                 total_reward = total_reward + gained;
