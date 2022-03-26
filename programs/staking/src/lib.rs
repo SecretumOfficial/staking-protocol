@@ -145,7 +145,6 @@ mod staking {
 
 
     pub fn unstaking(ctx: Context<Unstaking>, amount: u64) -> ProgramResult {
-
         if amount == 0{
             return Err(StakingErrors::AmountMustBigThanZero.into());
         }
@@ -163,10 +162,17 @@ mod staking {
             return Err(StakingErrors::InSufficientEscrowBalance.into());
         }        
 
-        let staker_data = ctx.accounts.staking_data.stakers.get(staker_index as usize).unwrap();   
-        if staker_data.gained_reward > 0 {
-            return Err(StakingErrors::ExistUnClaimedReward.into());
-        }
+        let total_staked = ctx.accounts.staking_data.total_staked;
+        let apy_max = ctx.accounts.staking_data.apy_max;
+        let min_stake_period = ctx.accounts.staking_data.min_stake_period;
+        let timeframe_started = ctx.accounts.staking_data.timeframe_started;
+        let timeframe = ctx.accounts.staking_data.timeframe_in_second;
+        let pool_reward = ctx.accounts.staking_data.pool_reward;
+
+        let staker0 = ctx.accounts.staking_data.stakers.get(staker_index as usize).unwrap();
+        let staked_amount = staker0.staked_amount;
+        let staked_time = staker0.staked_time;
+        let gained_reward = staker0.gained_reward;
 
         let authority_seeds = &[&STAKING_AUTH_PDA_SEED[..], ctx.accounts.staking_data.to_account_info().key.as_ref(), &[ctx.accounts.staking_data.bump_auth]];
         token::transfer(
@@ -176,12 +182,34 @@ mod staking {
                 amount,
         )?;
 
-        //update staking data
-        //let staking_data = &mut ctx.accounts.staking_data;        
-        ctx.accounts.staking_data.total_staked = ctx.accounts.staking_data.total_staked - amount;
+        //calculate rewarding for only unstaking amount
+        let gained = calculate_reward(apy_max as u64, total_staked, pool_reward, 
+            timeframe_started, timeframe_started + timeframe, amount,
+            staked_time, min_stake_period);
 
-        //update staker state        
-        let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
+        //if unstake full amount we payout total reward
+        //else we ony add gained reward to staker
+        if amount == staked_amount{
+            if (gained_reward + gained) > 0{
+                token::transfer(
+                    ctx.accounts
+                        .into_transfer_from_rewarder_to_staker_context()
+                        .with_signer(&[&authority_seeds[..]]),
+                        gained_reward + gained,
+                )?;
+            }
+            ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + gained_reward + gained;
+            ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance - gained_reward - gained;
+        }else{
+            ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + gained;
+        }
+
+        //update staking data
+        ctx.accounts.staking_data.total_staked = ctx.accounts.staking_data.total_staked - amount;   
+
+        let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();
+        staker.gained_reward = staker.gained_reward + gained;
+
         if staker.staked_amount == amount{ 
             //unstaking all, remove entry            
             ctx.accounts.staking_data.stakers.remove(staker_index as usize);

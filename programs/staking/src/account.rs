@@ -278,6 +278,11 @@ pub struct Unstaking<'info> {
     pub escrow_account: Account<'info, anchor_spl::token::TokenAccount>,
 
     #[account(mut,
+        constraint = staking_data.rewarder_account == *rewarder_account.to_account_info().key,
+    )]
+    pub rewarder_account: Account<'info, anchor_spl::token::TokenAccount>,
+
+    #[account(mut,
         constraint = *reclaimer.to_account_info().owner == *token_program.key,
         constraint = reclaimer.mint == staking_data.mint_address,
         constraint = reclaimer.owner == *authority.key,
@@ -301,6 +306,16 @@ impl<'info> Unstaking<'info> {
     ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
             from: self.escrow_account.to_account_info().clone(),
+            to: self.reclaimer.to_account_info().clone(),
+            authority: self.staking_authority.clone(),
+        };
+        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    }
+    pub fn into_transfer_from_rewarder_to_staker_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: self.rewarder_account.to_account_info().clone(),
             to: self.reclaimer.to_account_info().clone(),
             authority: self.staking_authority.clone(),
         };
