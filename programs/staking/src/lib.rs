@@ -182,10 +182,11 @@ mod staking {
                 amount,
         )?;
 
+        let now_ts = Clock::get()?.unix_timestamp as u64;
         //calculate rewarding for only unstaking amount
         let gained = calculate_reward(apy_max as u64, total_staked, pool_reward, 
             timeframe_started, timeframe_started + timeframe, amount,
-            staked_time, min_stake_period);
+            staked_time, min_stake_period, now_ts);
 
         //if unstake full amount we payout total reward
         //else we ony add gained reward to staker
@@ -218,8 +219,7 @@ mod staking {
         }
 
         //update staking state
-        ctx.accounts.stake_state_account.total_staked = ctx.accounts.stake_state_account.total_staked - amount;
-        let now_ts = Clock::get()?.unix_timestamp as u64;
+        ctx.accounts.stake_state_account.total_staked = ctx.accounts.stake_state_account.total_staked - amount;        
         ctx.accounts.stake_state_account.add_history(now_ts, 1, amount);
         Ok(())
     }
@@ -308,7 +308,7 @@ mod staking {
                 let staker = ctx.accounts.staking_data.stakers.get_mut(i).unwrap();
                 let gained = calculate_reward(apy_max as u64, total_staked, pool_reward, 
                     timeframe_started, time_frame_end, staker.staked_amount, 
-                    staker.staked_time, min_stake_period);
+                    staker.staked_time, min_stake_period, now_ts);
 
                 if gained == 0{
                     continue;

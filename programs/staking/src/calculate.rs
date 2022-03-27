@@ -1,15 +1,17 @@
 pub fn calculate_reward(apy_max: u64, pool_staked: u64, pool_reward: u64, 
-    time_frame_start: u64, time_frame_end: u64, staked: u64, stake_start_time: u64, min_stake_period: u64) -> u64
+    time_frame_start: u64, time_frame_end: u64, staked: u64, stake_start_time: u64, min_stake_period: u64, now_ts: u64) -> u64
 {
     if staked == 0 || stake_start_time >= time_frame_end{
         return 0;
     }
 
-    let mut seconds = time_frame_end.checked_sub(time_frame_start).unwrap();
-    let frame_seconds = seconds;
-    if stake_start_time > time_frame_start {
-        seconds = time_frame_end - stake_start_time;
+    let mut seconds = now_ts.checked_sub(stake_start_time).unwrap();
+
+    let frame_seconds = time_frame_end.checked_sub(time_frame_start).unwrap();
+    if seconds > frame_seconds {
+        seconds = frame_seconds;
     }
+
     if seconds < min_stake_period {
         return 0;
     }
