@@ -183,6 +183,7 @@ async function unstaking(
                     stakeStateAccount: stakeStateAccount,
                     escrowAccount: stakingData.escrowAccount,
                     reclaimer: reclaimer,
+                    rewarderAccount: stakingData.rewarderAccount,
                     authority: signer.publicKey,
                     stakingAuthority: stakingAuthority,
                     tokenProgram: TOKEN_PROGRAM_ID,
