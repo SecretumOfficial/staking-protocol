@@ -8,6 +8,17 @@ const os = require('os');
 const fs = require('fs');
 const lib = require('../lib');
 
+function sleep_sec(s) {
+    console.log("waiting...", s, "seconds")
+    return sleep(s * 1000)
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
+}
+
 describe('Unstaking tests', () => {
     const homedir = os.homedir();
     process.env.ANCHOR_WALLET = `${homedir}/.config/solana/id.json`;
@@ -32,7 +43,7 @@ describe('Unstaking tests', () => {
 
     let funderAuthority;
     let funderAccount;
-    const minTimeframeInSecond = 30;
+    const minTimeframeInSecond = 60;
     const minStakePeriod = 30;
     const apyMax = 800;
 
@@ -73,7 +84,7 @@ describe('Unstaking tests', () => {
         assert(stakerState.onwerAddress.toBase58() === stakerInitializer.publicKey.toBase58());
     });
 
-    it('UnStaking full amount', async () => {
+    it.skip('UnStaking full amount', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -100,7 +111,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 0);
     });
 
-    it('UnStaking some amount', async () => {
+    it.skip('UnStaking some amount', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -127,7 +138,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 1);
     });
 
-    it('UnStaking big amount than staked', async () => {
+    it.skip('UnStaking big amount than staked', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -153,4 +164,248 @@ describe('Unstaking tests', () => {
         assert(stakingData.totalStaked.toNumber() === amount);
         assert(stakingData.stakers.length === 1);
     });
+
+    it.skip('UnStaking some amount before min stake period', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        //unstaking
+        const unstakingAmount = 500;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount);
+
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers[0].gainedReward.toNumber() === 0)
+    });
+
+    it.skip('UnStaking full amount before min stake period', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        //unstaking
+        const unstakingAmount = amount;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount);
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers.length === 0)
+    });
+
+    it.skip('UnStaking some amount before min stake period with some delay', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        //wait some period
+        await sleep_sec(minStakePeriod - 5);
+
+        //unstaking
+        const unstakingAmount = 500;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount);
+
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers[0].gainedReward.toNumber() === 0)
+    });
+
+    it.skip('UnStaking full amount before min stake period with some delay', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        //delay
+        await sleep_sec(minStakePeriod - 5);
+
+        //unstaking
+        const unstakingAmount = amount;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount);
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers.length === 0)
+    });
+
+    it.skip('UnStaking some amount after min stake period with some delay', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+       
+        //wait some period
+        await sleep_sec(minStakePeriod + 1);
+
+        //unstaking
+        const unstakingAmount = 500;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount);
+
+        const nowTs = await utils.getNowTs(program.provider.connection);
+        const gainedReward = utils.calculateReward(
+            stakingData.apyMax, 
+            stakingData.totalStaked.toNumber(),
+            stakingData.poolReward.toNumber(),
+            stakingData.timeframeStarted.toNumber(),
+            stakingData.timeframeStarted.toNumber() + stakingData.timeframeInSecond.toNumber(),
+            500,
+            stakingData.stakers[0].stakedTime.toNumber(),
+            stakingData.minStakePeriod.toNumber(),
+            nowTs);
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers[0].gainedReward.toNumber() > 0);
+        assert(stakingData.stakers[0].gainedReward.toNumber() === Math.trunc(gainedReward));
+    });
+
+    it('UnStaking full amount after min stake period with some delay', async () => {
+        //staking 
+        const amount = 1000;
+        const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
+        const escrowAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        await lib.staking(program, stakingDataAccount, stakerAccount, amount, stakerInitializer);
+
+        const escrowAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, escrowAccount);
+        const stakerAccountBalance1 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(escrowAccountBalance1 === escrowAccountBalance + amount);
+        assert(stakerAccountBalance1 === stakerAccountBalance - amount);
+
+        let stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.totalStaked.toNumber() === amount);
+        assert(stakingData.stakers.length === 1);
+
+        //first fund 
+        const timeframeInSecond = 100
+        await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+       
+        //wait some period
+        await sleep_sec(minStakePeriod + 1);
+
+        //unstaking
+        const unstakingAmount = amount;
+        const res = await lib.unstaking(program, stakingDataAccount, stakerAccount, unstakingAmount, stakerInitializer);
+        assert(res === unstakingAmount)
+
+        const nowTs = await utils.getNowTs(program.provider.connection);
+        const gainedReward = utils.calculateReward(
+            stakingData.apyMax, 
+            stakingData.totalStaked.toNumber(),
+            stakingData.poolReward.toNumber(),
+            stakingData.timeframeStarted.toNumber(),
+            stakingData.timeframeStarted.toNumber() + stakingData.timeframeInSecond.toNumber(),
+            unstakingAmount,
+            stakingData.stakers[0].stakedTime.toNumber(),
+            stakingData.minStakePeriod.toNumber(),
+            nowTs);
+
+        assert(gainedReward > 0)
+
+        const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
+        assert(stakerAccountBalance2 === stakerAccountBalance1 + unstakingAmount + Math.trunc(gainedReward));
+
+        stakingData = await utils.getStakingData(program, stakingDataAccount);
+        assert(stakingData.stakers.length == 0);
+    });
+
 })

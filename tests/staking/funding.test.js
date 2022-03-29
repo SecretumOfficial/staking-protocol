@@ -73,6 +73,14 @@ describe('Funding tests', () => {
         assert(stakerState.onwerAddress.toBase58() === stakerInitializer.publicKey.toBase58());
     });
 
+    it('Can`t set less than min_time_frame', async () => {
+        const amount = 1000;
+        const timeframeInSecond = minTimeframeInSecond - 1;
+        const res = await lib.funding(program, stakingDataAccount, funderAccount, amount, timeframeInSecond, funderAuthority);
+        assert(res === 'timeframe must big than min');
+    });
+
+
     it('Funding', async () => {
         const amount = 1000;
         const timeframeInSecond = 3600;
