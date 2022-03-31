@@ -32,8 +32,8 @@ describe('Funding tests', () => {
 
     let funderAuthority;
     let funderAccount;
-    const minTimeframeInSecond = 30;
-    const minStakePeriod = 30;
+    const minTimeframeInSecond = 31;
+    const minStakePeriod = 32;
     const apyMax = 800;
 
 
@@ -101,11 +101,16 @@ describe('Funding tests', () => {
     });
 
     it('Funding insufficient amount', async () => {
-        const amount = 1000;
         const timeframeInSecond = 3600;
         const funderBalance = await utils.getTokenAccountBalance(program.provider.connection, funderAccount);
         const res = await lib.funding(program, stakingDataAccount, funderAccount, funderBalance + 1, timeframeInSecond, funderAuthority);
         assert(res === "insufficient balance")
+    });
+
+    it('Funding timeframe must big than min stake period', async () => {
+        const amount = 1000;
+        const res = await lib.funding(program, stakingDataAccount, funderAccount, amount, minStakePeriod - 1, funderAuthority);
+        assert(res === "timeframe must big than min stake period")
     });
 
 })
