@@ -130,19 +130,14 @@ describe('Claiming tests', () => {
         await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
         stakingData = await utils.getStakingData(program, stakingDataAccount);
         const gainedReward = stakingData.stakers[0].gainedReward.toNumber();
-        assert(stakingData.payoutReward.toNumber() === gainedReward);
 
-        console.log("claiming gained reward=", gainedReward);
         const res = await lib.claimReward(program, stakingDataAccount, stakerAccount, gainedReward, stakerInitializer);
   
         const stakerAccountBalance2 = await utils.getTokenAccountBalance(program.provider.connection, stakerAccount);
         assert(stakerAccountBalance2 === stakerAccountBalance1 + gainedReward);
         stakingData = await utils.getStakingData(program, stakingDataAccount);
 
-        console.log(stakingData);
-
         assert(stakingData.totalRewardPaid.toNumber() === gainedReward);
-        assert(stakingData.payoutReward.toNumber() === 0);
         assert(stakingData.stakers[0].gainedReward.toNumber() === 0);
 
     });
@@ -176,7 +171,6 @@ describe('Claiming tests', () => {
         await lib.funding(program, stakingDataAccount, funderAccount, fundAmount, timeframeInSecond, funderAuthority);
         stakingData = await utils.getStakingData(program, stakingDataAccount);
         const gainedReward = stakingData.stakers[0].gainedReward.toNumber();
-        assert(stakingData.payoutReward.toNumber() === gainedReward);
 
         console.log("claiming gained reward=", 1);
         const res = await lib.claimReward(program, stakingDataAccount, stakerAccount, 1, stakerInitializer);
@@ -186,11 +180,10 @@ describe('Claiming tests', () => {
         stakingData = await utils.getStakingData(program, stakingDataAccount);
 
         assert(stakingData.totalRewardPaid.toNumber() === 1);
-        assert(stakingData.payoutReward.toNumber() === gainedReward - 1);
         assert(stakingData.stakers[0].gainedReward.toNumber() === gainedReward - 1);
 
         const nowTs = await utils.getNowTs(program.provider.connection);
         const reward = utils.calculateReward(800, 1000, 1000, 0, 30, 1000, 0, stakingData.minStakePeriod, nowTs);
-        console.log("reward=", reward);
+
     });
 })

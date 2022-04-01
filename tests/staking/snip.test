@@ -12,9 +12,9 @@ solana-keygen pubkey
 npm install -g mocha
 
 mocha --timeout 10000 ./tests/staking/staking.test.js
-mocha --timeout 10000 ./tests/staking/unstaking.test.js
-mocha --timeout 10000 ./tests/staking/funding.test.js
-mocha --timeout 60000 ./tests/staking/claiming.test.js
+mocha --timeout 1000000 ./tests/staking/unstaking.test.js
+mocha --timeout 1000000 ./tests/staking/funding.test.js
+mocha --timeout 100000 ./tests/staking/claiming.test.js
 
 
 

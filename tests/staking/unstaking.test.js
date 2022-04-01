@@ -84,7 +84,7 @@ describe('Unstaking tests', () => {
         assert(stakerState.onwerAddress.toBase58() === stakerInitializer.publicKey.toBase58());
     });
 
-    it.skip('UnStaking full amount', async () => {
+    it('UnStaking full amount', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -111,7 +111,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 0);
     });
 
-    it.skip('UnStaking some amount', async () => {
+    it('UnStaking some amount', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -138,7 +138,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 1);
     });
 
-    it.skip('UnStaking big amount than staked', async () => {
+    it('UnStaking big amount than staked', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -165,7 +165,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 1);
     });
 
-    it.skip('UnStaking some amount before min stake period', async () => {
+    it('UnStaking some amount before min stake period', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -199,7 +199,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers[0].gainedReward.toNumber() === 0)
     });
 
-    it.skip('UnStaking full amount before min stake period', async () => {
+    it('UnStaking full amount before min stake period', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -232,7 +232,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 0)
     });
 
-    it.skip('UnStaking some amount before min stake period with some delay', async () => {
+    it('UnStaking some amount before min stake period with some delay', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -269,7 +269,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers[0].gainedReward.toNumber() === 0)
     });
 
-    it.skip('UnStaking full amount before min stake period with some delay', async () => {
+    it('UnStaking full amount before min stake period with some delay', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);
@@ -305,7 +305,7 @@ describe('Unstaking tests', () => {
         assert(stakingData.stakers.length === 0)
     });
 
-    it.skip('UnStaking some amount after min stake period with some delay', async () => {
+    it('UnStaking some amount after min stake period with some delay', async () => {
         //staking 
         const amount = 1000;
         const escrowAccount = await utils.getEscrowAccount(stakingDataAccount, program.programId);

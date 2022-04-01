@@ -96,8 +96,7 @@ describe('Funding tests', () => {
         assert(funderBalance1 === funderBalance - amount);
 
         const stakingData = await utils.getStakingData(program, stakingDataAccount);
-        assert(stakingData.rewarderBalance.toNumber() === amount);
-        assert(stakingData.poolReward.toNumber() === amount);        
+        assert(stakingData.poolReward.toNumber() === amount);
     });
 
     it('Funding insufficient amount', async () => {
