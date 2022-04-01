@@ -26,7 +26,6 @@ pub struct StakingData {
     pub mint_address: Pubkey,
     pub escrow_account: Pubkey,
     pub rewarder_account: Pubkey,
-    pub rewarder_balance: u64,
     pub total_funded: u64,
     pub total_reward_paid: u64,
 
@@ -38,7 +37,6 @@ pub struct StakingData {
     pub timeframe_in_second: u64,
     pub timeframe_started: u64,
     pub pool_reward: u64,
-    pub payout_reward: u64,
     pub apy_max: u32,
     pub min_stake_period: u64,
 

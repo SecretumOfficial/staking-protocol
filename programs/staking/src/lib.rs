@@ -46,7 +46,6 @@ mod staking {
         staking_data.rewarder_account = *ctx.accounts.rewarder_account.to_account_info().key;
         staking_data.mint_address = *ctx.accounts.mint_address.key;
 
-        staking_data.rewarder_balance = 0;
         staking_data.total_funded = 0;
         staking_data.total_reward_paid = 0;
 
@@ -54,7 +53,6 @@ mod staking {
         staking_data.timeframe_in_second = 0;
         staking_data.timeframe_started = 0;
         staking_data.pool_reward = 0;
-        staking_data.payout_reward = 0;
         staking_data.apy_max = apy_max;    
         staking_data.min_stake_period = min_stake_period;
 
@@ -200,9 +198,6 @@ mod staking {
                 )?;
             }
             ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + gained_reward + gained;
-            ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance - gained_reward - gained;
-        }else{
-            ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + gained;
         }
 
         //update staking data
@@ -242,10 +237,6 @@ mod staking {
             return Err(StakingErrors::InSufficientGainedReward.into());            
         }
 
-        if amount > ctx.accounts.staking_data.payout_reward {
-            return Err(StakingErrors::InSufficientRewarderBalance.into());
-        }        
-
         let authority_seeds = &[&STAKING_AUTH_PDA_SEED[..], ctx.accounts.staking_data.to_account_info().key.as_ref(), &[ctx.accounts.staking_data.bump_auth]];
         token::transfer(
             ctx.accounts
@@ -256,9 +247,7 @@ mod staking {
 
         //update staking data
         //let staking_data = &mut ctx.accounts.staking_data;
-        ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward - amount;
         ctx.accounts.staking_data.total_reward_paid = ctx.accounts.staking_data.total_reward_paid + amount;
-        ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance - amount;
 
         //update staker state        
         let staker = ctx.accounts.staking_data.stakers.get_mut(staker_index as usize).unwrap();        
@@ -278,7 +267,7 @@ mod staking {
         let apy_max = ctx.accounts.staking_data.apy_max;
         let min_stake_period = ctx.accounts.staking_data.min_stake_period;
         let now_ts = Clock::get()?.unix_timestamp as u64;
-        let mut total_reward: u64 = 0;
+        let mut total_reward_in_pending: u64 = 0;
         let timeframe_started = ctx.accounts.staking_data.timeframe_started;
         let timeframe = ctx.accounts.staking_data.timeframe_in_second;
         let pool_reward = ctx.accounts.staking_data.pool_reward;
@@ -295,8 +284,6 @@ mod staking {
             return Err(StakingErrors::TimeframeMustBigThanMinStakePeriod.into());
         }
 
-
-        let mut pool_rest = ctx.accounts.staking_data.pool_reward;
         //calc reward
         if timeframe > 0{
             let mut time_frame_end = timeframe_started + timeframe;
@@ -310,18 +297,16 @@ mod staking {
                     timeframe_started, time_frame_end, staker.staked_amount, 
                     staker.staked_time, min_stake_period, now_ts);
 
-                if gained == 0{
-                    continue;
+                if gained != 0{
+                    staker.gained_reward = staker.gained_reward + gained;
+                    staker.staked_time = now_ts;    
                 }
-
-                staker.gained_reward = staker.gained_reward + gained;
-                total_reward = total_reward + gained;
-                staker.staked_time = now_ts;
+                total_reward_in_pending = total_reward_in_pending + staker.gained_reward;                
             }
-            pool_rest = ctx.accounts.staking_data.pool_reward - total_reward;
         }
 
-        let real_fund_amount = amount - pool_rest;
+        let rewarder_rest_amount = ctx.accounts.rewarder_account.amount - total_reward_in_pending;
+        let real_fund_amount = amount - rewarder_rest_amount;
         if real_fund_amount > ctx.accounts.funder_account.amount {
             return Err(StakingErrors::InSufficientBalance.into());
         }
@@ -330,10 +315,8 @@ mod staking {
             ctx.accounts.into_transfer_to_rewarder_context(),
             amount,
         )?;
-        ctx.accounts.staking_data.payout_reward = ctx.accounts.staking_data.payout_reward + total_reward;
-        ctx.accounts.staking_data.pool_reward = pool_rest + real_fund_amount;
+        ctx.accounts.staking_data.pool_reward = rewarder_rest_amount + real_fund_amount;
         ctx.accounts.staking_data.total_funded = ctx.accounts.staking_data.total_funded + real_fund_amount;
-        ctx.accounts.staking_data.rewarder_balance = ctx.accounts.staking_data.rewarder_balance + real_fund_amount;
         ctx.accounts.staking_data.timeframe_in_second = timeframe_in_second;
         ctx.accounts.staking_data.timeframe_started = now_ts;
         Ok(())
