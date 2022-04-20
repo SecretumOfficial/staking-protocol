@@ -28,9 +28,13 @@ mod staking {
         min_stake_period: u64,
     ) -> ProgramResult {
 
-        if apy_max < 1{
-            return Err(StakingErrors::ApyMaxMustBigThanZero.into());
+        if apy_max < 100{
+            return Err(StakingErrors::ApyMaxMustBigThan100.into());
         }
+        if apy_max >= 10000{
+            return Err(StakingErrors::ApyMaxMustLessThan10000.into());
+        }
+
         if min_timeframe_in_second < 1{
             return Err(StakingErrors::MinTimeFrameMustBigThanZero.into());
         }
@@ -323,12 +327,15 @@ mod staking {
     }
 
     pub fn change_setting(ctx: Context<ChnageSetting>, apy_max: u32, min_stake_period: u64) -> ProgramResult {
-
-        if min_stake_period > ctx.accounts.staking_data.timeframe_in_second {
+        if ctx.accounts.staking_data.timeframe_in_second > 0 && min_stake_period > ctx.accounts.staking_data.timeframe_in_second {
             return Err(StakingErrors::MinStakePeriodMustBeLessThanCurrentTimeFrame.into());
+        }    
+
+        if apy_max < 100{
+            return Err(StakingErrors::ApyMaxMustBigThan100.into());
         }
-        if apy_max < 1{
-            return Err(StakingErrors::ApyMaxMustBigThanZero.into());
+        if apy_max >= 10000{
+            return Err(StakingErrors::ApyMaxMustLessThan10000.into());
         }
         ctx.accounts.staking_data.apy_max = apy_max;
         ctx.accounts.staking_data.min_stake_period = min_stake_period;

@@ -47,8 +47,11 @@ pub enum StakingErrors {
     #[msg("min stake period must less than current timeframe")]
     MinStakePeriodMustBeLessThanCurrentTimeFrame,
 
-    #[msg("apy max must big than zero")]
-    ApyMaxMustBigThanZero,
+    #[msg("apy max must big than 100")]
+    ApyMaxMustBigThan100,
+
+    #[msg("apy max must less than 10000")]
+    ApyMaxMustLessThan10000,
 
     #[msg("min timeframe must big than zero")]
     MinTimeFrameMustBigThanZero,

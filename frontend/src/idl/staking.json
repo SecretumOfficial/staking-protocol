@@ -59,6 +59,10 @@
         {
           "name": "minTimeframeInSecond",
           "type": "u64"
+        },
+        {
+          "name": "minStakePeriod",
+          "type": "u64"
         }
       ]
     },
@@ -154,6 +158,11 @@
         },
         {
           "name": "escrowAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rewarderAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -272,7 +281,7 @@
       ]
     },
     {
-      "name": "setMaxApy",
+      "name": "changeSetting",
       "accounts": [
         {
           "name": "stakingData",
@@ -289,6 +298,10 @@
         {
           "name": "apyMax",
           "type": "u32"
+        },
+        {
+          "name": "minStakePeriod",
+          "type": "u64"
         }
       ]
     }
@@ -318,10 +331,6 @@
           {
             "name": "rewarderAccount",
             "type": "publicKey"
-          },
-          {
-            "name": "rewarderBalance",
-            "type": "u64"
           },
           {
             "name": "totalFunded",
@@ -356,12 +365,12 @@
             "type": "u64"
           },
           {
-            "name": "payoutReward",
-            "type": "u64"
-          },
-          {
             "name": "apyMax",
             "type": "u32"
+          },
+          {
+            "name": "minStakePeriod",
+            "type": "u64"
           },
           {
             "name": "stakers",
@@ -546,6 +555,31 @@
       "code": 6012,
       "name": "TimeframeMustBigThanMin",
       "msg": "timeframe must big than min"
+    },
+    {
+      "code": 6013,
+      "name": "TimeframeMustBigThanMinStakePeriod",
+      "msg": "timeframe must big than min stake period"
+    },
+    {
+      "code": 6014,
+      "name": "MinStakePeriodMustBeLessThanCurrentTimeFrame",
+      "msg": "min stake period must less than current timeframe"
+    },
+    {
+      "code": 6015,
+      "name": "ApyMaxMustBigThanZero",
+      "msg": "apy max must big than zero"
+    },
+    {
+      "code": 6016,
+      "name": "MinTimeFrameMustBigThanZero",
+      "msg": "min timeframe must big than zero"
+    },
+    {
+      "code": 6017,
+      "name": "MinStakePeriodMustBigThanZero",
+      "msg": "min stake period must big than zero"
     }
   ],
   "metadata": {
