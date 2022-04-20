@@ -56,6 +56,6 @@ pub fn calculate_reward(apy_max: u64, pool_staked: u64, pool_reward: u64,
     if apy > (apy_max as f64){
         reward = ((apy_max as f64 /100.00) * (staked as f64)) - (staked as f64);
     }
-    return reward.trunc() as u64;
+    return reward as u64;
 }
 
